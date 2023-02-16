@@ -1,0 +1,12 @@
+BasedOnStyle: Mozilla
+FixNamespaceComments: true
+SortIncludes: CaseInsensitive
+IncludeBlocks: Merge
+IncludeCategories:
+  - Regex: '<.*>'
+    Priority: 1
+  - Regex: '".*"'
+    Priority: 2
+  - Regex: '.*'
+    Priority: 3
+    SortPriority: 0
