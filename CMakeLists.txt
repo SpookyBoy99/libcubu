@@ -18,9 +18,18 @@ include_directories(src)
 # -----------------------------------
 
 set(SOURCES
-        src/graph.cpp
-        src/main.cu
-)
+        src/common/bundling_job.cu
+        src/core/edge_profile.cpp
+        src/core/graph.cpp
+        src/core/polyline.cpp
+        src/core/random_states.cu
+        src/kernels/advect_sites.cu
+        src/kernels/init_random_states.cu
+        src/kernels/generate_density_map_fast.cu
+        src/kernels/resample.cu
+        src/kernels/resample_count.cu
+        src/main.cpp
+        )
 
 # -----------------------------------
 # Build binary and/or library
@@ -35,7 +44,8 @@ target_link_libraries(${PROJECT_NAME} ${LIBS})
 # -----------------------------------
 
 # Set version to C++17
-set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+target_compile_definitions(${PROJECT_NAME} PRIVATE GLM_FORCE_CUDA CUDA_VERSION=12000)
 
 
