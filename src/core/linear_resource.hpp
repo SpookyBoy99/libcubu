@@ -42,7 +42,9 @@ public:
    * @param size Size of the texture data.
    * @param desc Description of the channel format for the texture data.
    */
-  explicit linear_resource(size_t size, cudaChannelFormatDesc desc);
+  explicit linear_resource(
+    size_t size,
+    cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>());
 
   /**
    * Creates a new cuda texture object and uploads the host data to the device.
@@ -50,8 +52,9 @@ public:
    * @param hostData Host data to upload to the device.
    * @param desc     Description of the channel format for the texture data.
    */
-  explicit linear_resource(const std::vector<T>& hostData,
-                           cudaChannelFormatDesc desc);
+  explicit linear_resource(
+    const std::vector<T>& hostData,
+    cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>());
 
   /**
    * Creates a new cuda texture object and uploads the host data to the device.
@@ -60,9 +63,10 @@ public:
    * @param size Size of the texture data.
    * @param desc Description of the channel format for the texture data.
    */
-  explicit linear_resource(const T* data,
-                           size_t size,
-                           cudaChannelFormatDesc desc);
+  explicit linear_resource(
+    const T* data,
+    size_t size,
+    cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>());
 
   /**
    * Move constructor.

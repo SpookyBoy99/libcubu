@@ -1,6 +1,3 @@
-#include <cstdio>
-#include <glm/geometric.hpp>
-#include <glm/vec2.hpp>
 #include "common/kernels.hpp"
 
 namespace cubu::kernels {
@@ -9,8 +6,9 @@ resample(float2* resampledPoints,
          cudaTextureObject_t pointsTex,
          cudaTextureObject_t edgeIndicesTex,
          cudaTextureObject_t resampledEdgeIndicesTex,
+         size_t pointCount,
+         size_t resampledPointCount,
          size_t edgeCount,
-         size_t resampledEdgeCount,
          float delta,
          float jitter,
          curandState* state)
@@ -30,7 +28,14 @@ resample(float2* resampledPoints,
     float currentDistance = delta;
 
     // *** Get the index of the first point of the edge
-    int pointIndex = tex1Dfetch<int>(edgeIndicesTex, static_cast<int>(i));
+    int pointIndexStart = tex1Dfetch<int>(edgeIndicesTex, static_cast<int>(i)),
+        pointIndexEnd =
+          i == edgeCount - 1
+            ? static_cast<int>(pointCount)
+            : tex1Dfetch<int>(edgeIndicesTex, static_cast<int>(i + 1));
+
+    // *** Keep track of a counter for the current point index
+    int pointIndex = pointIndexStart;
 
     // *** Get the first two points
     auto previousPoint = tex1Dfetch<float2>(pointsTex, pointIndex++),
@@ -38,13 +43,11 @@ resample(float2* resampledPoints,
 
     // *** Get the number of new points
     uint resampledIndexStart =
-      tex1Dfetch<int>(resampledEdgeIndicesTex, static_cast<int>(i));
-
-    // *** Get the new number of points for the next line
-    uint resampledIndexEnd =
-      i == edgeCount - 1
-        ? resampledEdgeCount
-        : tex1Dfetch<int>(resampledEdgeIndicesTex, static_cast<int>(i + 1));
+           tex1Dfetch<int>(resampledEdgeIndicesTex, static_cast<int>(i)),
+         resampledIndexEnd = i == edgeCount - 1
+                               ? resampledPointCount
+                               : tex1Dfetch<int>(resampledEdgeIndicesTex,
+                                                 static_cast<int>(i + 1));
 
     // *** Set j to start at the point index start
     uint j = resampledIndexStart;
@@ -58,9 +61,10 @@ resample(float2* resampledPoints,
     while (true) {
       // *** Calculate the distance between the current and (updated) previous
       // point
-      float newDistance =
-        glm::distance(glm::vec2{ previousPoint.x, previousPoint.y },
-                      glm::vec2{ currentPoint.x, currentPoint.y });
+      float newDistance = sqrtf((previousPoint.x - currentPoint.x) *
+                                  (previousPoint.x - currentPoint.x) +
+                                (previousPoint.y - currentPoint.y) *
+                                  (previousPoint.y - currentPoint.y));
 
       // *** Check if the calculated distance is smaller than the current
       // distance, in that case skip the current point, if further away add a
@@ -77,10 +81,7 @@ resample(float2* resampledPoints,
         currentPoint = tex1Dfetch<float2>(pointsTex, pointIndex++);
 
         // *** Check if the fetched point is the end of the line
-        if (currentPoint.x == -1 && currentPoint.y == -1) {
-          // *** Add the previous point of the edge to the line
-          resampledPoints[j++] = previousPoint;
-
+        if (pointIndex > pointIndexEnd) {
           break;
         }
       } else {
@@ -99,13 +100,8 @@ resample(float2* resampledPoints,
           make_float2(previousPoint.x * (1 - rt) + currentPoint.x * rt,
                       previousPoint.y * (1 - rt) + currentPoint.y * rt);
 
-        // *** Check if the number of resampled points has been reached
-        if (j == resampledIndexEnd) {
-          printf("Reached %s %d: Why?", __FILE__, __LINE__);
-
-          // *** Add the last point of the edge to the line
-          resampledPoints[j++] = currentPoint;
-
+        // *** Stop if the number of required resampled points is reached
+        if (j == resampledIndexEnd - 1) {
           break;
         }
 
@@ -118,18 +114,8 @@ resample(float2* resampledPoints,
       }
     }
 
-    // fixme: When does this occur?
-    if (j < resampledIndexEnd - 1) {
-      printf("Reached %s %d: Why?", __FILE__, __LINE__);
-      // *** Copy the previous point
-      resampledPoints[j++] = resampledPoints[j - 2];
-    }
-
-    // *** Add the marker
-    resampledPoints[j++] = make_float2(-1.0f, -1.0f);
-
-    // *** Check if the correct number of points are generated
-    assert(j == resampledIndexEnd);
+    // *** Add the last point as well
+    resampledPoints[j++] = tex1Dfetch<float2>(pointsTex, pointIndexEnd - 1);
 
     // *** Update random generator
     state[threadIdx.x] = lState;

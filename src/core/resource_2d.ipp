@@ -75,19 +75,15 @@ template<class T>
 resource_2d<T>&
 resource_2d<T>::operator=(resource_2d&& o) noexcept
 {
-  // *** Move all values
-  initialized_ = std::move(o.initialized_);
-  devData_ = std::move(o.devData_);
-  pitch_ = std::move(o.pitch_);
-  width_ = std::move(o.width_);
-  height_ = std::move(o.height_);
-  tex_ = std::move(o.tex_);
-  texRes_ = std::move(o.texRes_);
-  texDescr_ = std::move(o.texDescr_);
-
-  // *** Set the initialized to false on the other object to prevent freeing of
-  // resources
-  o.initialized_ = false;
+  // *** Swap all values (this way unused resources get freed)
+  std::swap(initialized_, o.initialized_);
+  std::swap(devData_, o.devData_);
+  std::swap(pitch_, o.pitch_);
+  std::swap(width_, o.width_);
+  std::swap(height_, o.height_);
+  std::swap(tex_, o.tex_);
+  std::swap(texRes_, o.texRes_);
+  std::swap(texDescr_, o.texDescr_);
 
   // *** Return this
   return *this;
@@ -157,6 +153,13 @@ T*
 resource_2d<T>::dev_ptr() const
 {
   return devData_;
+}
+
+template<class T>
+size_t
+resource_2d<T>::pitch() const
+{
+  return pitch_ / sizeof(T);
 }
 
 template<class T>

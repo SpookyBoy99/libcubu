@@ -1,6 +1,3 @@
-#include <cstdio>
-#include <glm/geometric.hpp>
-#include <glm/vec2.hpp>
 #include "common/kernels.hpp"
 
 namespace cubu::kernels {
@@ -8,6 +5,7 @@ __global__ void
 calculateResampleCount(int* edgesSampleCount,
                        cudaTextureObject_t pointsTex,
                        cudaTextureObject_t edgeIndicesTex,
+                       size_t pointCount,
                        size_t edgeCount,
                        float delta)
 {
@@ -26,22 +24,30 @@ calculateResampleCount(int* edgesSampleCount,
     float currentDistance = delta;
 
     // *** Get the index of the first point of the edge
-    int pointIndex = tex1Dfetch<int>(edgeIndicesTex, static_cast<int>(i));
+    int pointIndexStart = tex1Dfetch<int>(edgeIndicesTex, static_cast<int>(i)),
+        pointIndexEnd =
+          i == edgeCount - 1
+            ? static_cast<int>(pointCount)
+            : tex1Dfetch<int>(edgeIndicesTex, static_cast<int>(i + 1));
+
+    // *** Keep track of a counter for the current point index
+    int pointIndex = pointIndexStart;
 
     // *** Get the first two points
     auto previousPoint = tex1Dfetch<float2>(pointsTex, pointIndex++),
          currentPoint = tex1Dfetch<float2>(pointsTex, pointIndex++);
 
-    // *** Initialize the point count to 2: start point and endpoint marker
-    int sampleCount = 2;
+    // *** Initialize the point count to 1 for the start point
+    int sampleCount = 1;
 
     // *** Keep looping until the end of the edge is reached
     while (true) {
       // *** Calculate the distance between the current and (updated) previous
       // point
-      float newDistance =
-        glm::distance(glm::vec2{ previousPoint.x, previousPoint.y },
-                      glm::vec2{ currentPoint.x, currentPoint.y });
+      float newDistance = sqrtf((previousPoint.x - currentPoint.x) *
+                                  (previousPoint.x - currentPoint.x) +
+                                (previousPoint.y - currentPoint.y) *
+                                  (previousPoint.y - currentPoint.y));
 
       // *** Check if the calculated distance is smaller than the current
       // distance, in that case skip the current point, if further away add a
@@ -54,11 +60,11 @@ calculateResampleCount(int* edgesSampleCount,
         // *** Set previous point to be the current point
         previousPoint = currentPoint;
 
-        // *** Fetch the next point in line and set it o be the current point
+        // *** Fetch the next point in line and set it to be the current point
         currentPoint = tex1Dfetch<float2>(pointsTex, pointIndex++);
 
         // *** Check if the fetched point is the end of the line
-        if (currentPoint.x == -1 && currentPoint.y == -1) {
+        if (pointIndex > pointIndexEnd) {
           break;
         }
       } else {
@@ -84,7 +90,7 @@ calculateResampleCount(int* edgesSampleCount,
     }
 
     // *** Store the sample points
-    edgesSampleCount[i] = sampleCount == 2 ? 3 : sampleCount;
+    edgesSampleCount[i] = sampleCount == 1 ? 2 : sampleCount;
   }
 }
 } // namespace cubu::kernels

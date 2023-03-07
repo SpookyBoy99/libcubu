@@ -33,7 +33,9 @@ public:
    * @param size Size of the texture data.
    * @param desc Description of the channel format for the texture data.
    */
-  explicit resource_2d(int width, int height, cudaChannelFormatDesc desc);
+  explicit resource_2d(int width,
+                       int height,
+                       cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>());
 
   /**
    * Creates a new cuda texture object and uploads the host data to the device.
@@ -44,7 +46,7 @@ public:
   explicit resource_2d(const std::vector<T>& hostData,
                        int width,
                        int height,
-                       cudaChannelFormatDesc desc);
+                       cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>());
 
   /**
    * Creates a new cuda texture object and uploads the host data to the device.
@@ -56,7 +58,7 @@ public:
   explicit resource_2d(const T* data,
                        int width,
                        int height,
-                       cudaChannelFormatDesc desc);
+                       cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>());
 
   /**
    * Move constructor.
@@ -118,6 +120,13 @@ public:
    * @returns Device pointer.
    */
   [[nodiscard]] T* dev_ptr() const;
+
+  /**
+   * Getter for the pitch of the resource.
+   *
+   * @returns Pitch of the underlying device array.
+   */
+  [[nodiscard]] size_t pitch() const;
 
   /**
    * Getter for the underlying texture object.

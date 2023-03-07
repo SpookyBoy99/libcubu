@@ -1,6 +1,11 @@
 #ifndef CUBU_EDGE_PROFILE_HPP
 #define CUBU_EDGE_PROFILE_HPP
 
+#ifndef __NVCC__
+#define __host__
+#define __device__
+#endif
+
 #include <array>
 #include <cstddef>
 
@@ -14,7 +19,7 @@ class edge_profile
   } profile_type_t;
 
 public:
-  float operator()(size_t i, size_t size) const;
+  __host__ __device__ float operator()(size_t i, size_t size) const;
 
   static edge_profile uniform(bool fixEndpoints = false);
 

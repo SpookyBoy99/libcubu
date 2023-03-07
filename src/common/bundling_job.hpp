@@ -34,6 +34,15 @@ public:
 
     /** 1D function describing bundling strength along an edge. */
     edge_profile edgeProfile{ edge_profile::uniform() };
+
+    /** Kernel size (pixels): controls the spatial 'scale' at which we see bundles. */
+    float advectKernelSize{ 15.0f };
+
+    /** Laplacian smoothing kernel width ([0,1]), fraction of image width. */
+    float smoothingKernelFrac{ 0.05f };
+
+    /** Bundle smoothing ([0,1]): Controls smoothness of bundles. */
+    float smoothness{ 0.2f };
   } settings_t;
 
   bundling_job(const graph& graph, const settings_t& settings);
@@ -55,6 +64,17 @@ protected:
     const linear_resource<int>& edgeIndicesRes,
     const linear_resource<float>& edgeLengthsRes,
     const settings_t& settings);
+
+  static linear_resource<glm::vec2> advect_sites(
+    const linear_resource<glm::vec2>& pointsRes,
+    const linear_resource<int>& edgeIndicesRes,
+    const resource_2d<float>& densityMapRes,
+    const bundling_job::settings_t& settings);
+
+  static linear_resource<glm::vec2> smooth_lines(
+    const linear_resource<glm::vec2>& pointsRes,
+    const linear_resource<int>& edgeIndicesRes,
+    const bundling_job::settings_t& settings);
 };
 
 } // namespace cubu

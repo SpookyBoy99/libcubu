@@ -64,17 +64,13 @@ template<class T>
 linear_resource<T>&
 linear_resource<T>::operator=(linear_resource&& o) noexcept
 {
-  // *** Move all values
-  initialized_ = std::move(o.initialized_);
-  devData_ = std::move(o.devData_);
-  size_ = std::move(o.size_);
-  tex_ = std::move(o.tex_);
-  texRes_ = std::move(o.texRes_);
-  texDescr_ = std::move(o.texDescr_);
-
-  // *** Set the initialized to false on the other object to prevent freeing of
-  // resources
-  o.initialized_ = false;
+  // *** Swap all values (this way unused resources get freed)
+  std::swap(initialized_, o.initialized_);
+  std::swap(devData_, o.devData_);
+  std::swap(size_, o.size_);
+  std::swap(tex_, o.tex_);
+  std::swap(texRes_, o.texRes_);
+  std::swap(texDescr_, o.texDescr_);
 
   // *** Return this
   return *this;

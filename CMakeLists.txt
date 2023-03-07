@@ -19,15 +19,17 @@ include_directories(src)
 
 set(SOURCES
         src/common/bundling_job.cu
-        src/core/edge_profile.cpp
+        src/core/edge_profile.cu
         src/core/graph.cpp
         src/core/polyline.cpp
         src/core/random_states.cu
         src/kernels/advect_sites.cu
+        src/kernels/convolution.cu
         src/kernels/init_random_states.cu
         src/kernels/generate_density_map_fast.cu
         src/kernels/resample.cu
-        src/kernels/resample_count.cu
+        src/kernels/calculate_resample_count.cu
+        src/kernels/smooth_lines.cu
         src/main.cpp
         )
 

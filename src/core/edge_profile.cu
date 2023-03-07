@@ -1,8 +1,7 @@
 #include "edge_profile.hpp"
-#include <cmath>
 
 namespace cubu {
-float
+__host__ __device__ float
 edge_profile::operator()(size_t i, size_t size) const
 {
   switch (profileType_) {
