@@ -6,6 +6,13 @@ project(CUBu VERSION "0.0.1" LANGUAGES CXX CUDA)
 # -----------------------------------
 
 find_package(CUDA REQUIRED)
+find_package(OpenGL REQUIRED COMPONENTS EGL)
+
+# -----------------------------------
+# Add the glad subdirectory
+# -----------------------------------
+
+add_subdirectory(lib/glad)
 
 # -----------------------------------
 # Include the source directory
@@ -18,19 +25,33 @@ include_directories(src)
 # -----------------------------------
 
 set(SOURCES
-        src/common/bundling_job.cu
-        src/core/edge_profile.cu
-        src/core/graph.cpp
-        src/core/polyline.cpp
-        src/core/random_states.cu
-        src/kernels/advect_sites.cu
-        src/kernels/convolution.cu
-        src/kernels/init_random_states.cu
-        src/kernels/generate_density_map_fast.cu
-        src/kernels/resample.cu
-        src/kernels/calculate_resample_count.cu
-        src/kernels/smooth_lines.cu
-        src/main.cpp
+        src/internal/gpu/advect_points.cu
+        src/internal/gpu/download_graph.cu
+        src/internal/gpu/generate_density_map.cu
+        src/internal/gpu/resample_edges.cu
+        src/internal/gpu/smooth_edges.cu
+        src/internal/gpu/upload_graph.cu
+        src/internal/kernels/advect_sites.cu
+        src/internal/kernels/convolution.cu
+        src/internal/kernels/init_random_states.cu
+        src/internal/kernels/generate_density_map_fast.cu
+        src/internal/kernels/generate_density_map_slow.cu
+        src/internal/kernels/resample_edges.cu
+        src/internal/kernels/calculate_resample_count.cu
+        src/internal/kernels/smooth_lines.cu
+        src/internal/random_states.cu
+        src/types/edge_profile.cu
+        src/types/graph.cpp
+        src/types/polyline.cpp
+        src/bundler.cu
+        src/interpolator.cpp
+        src/renderer.cpp
+        tests/main.cpp
+        )
+
+set(LIBS
+        OpenGL::EGL
+        glad
         )
 
 # -----------------------------------
@@ -40,6 +61,8 @@ set(SOURCES
 # Add the executable and link it
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} ${LIBS})
+target_include_directories(${PROJECT_NAME} PUBLIC include)
+
 
 # -----------------------------------
 # Compiler settings
