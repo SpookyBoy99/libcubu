@@ -38,10 +38,10 @@ private:
   curandState* d_randomStates_;
   size_t size_;
 };
-} // namespace cubu
+} // namespace cubu::internal
 #else
 namespace cubu::internal {
 class random_states;
-} // namespace cubu
+} // namespace cubu::internal
 #endif
 #endif // CUBU_RANDOM_STATES_HPP

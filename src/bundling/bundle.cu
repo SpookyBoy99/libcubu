@@ -1,14 +1,31 @@
-#include "cubu/bundler.hpp"
+#include "cubu/bundling.hpp"
 #include "cubu/internal/gpu.hpp"
 #include "cubu/internal/random_states.hpp"
 
 namespace cubu {
-graph_t
-bundler::bundle(const graph_t& graph, const bundler::settings_t& settings)
+graph
+bundling::bundle(const graph& graph, const bundling_settings_t& settings)
 {
+  // *** Get the offset
+  glm::vec2 offset = graph.bounds().min;
+
+  // *** Get the range of the graph
+  glm::vec2 range = graph.bounds().max - graph.bounds().min;
+
+  // *** Calculate the scale
+  float scale = range.x > range.y
+                  ? static_cast<float>(settings.resolution) / range.x
+                  : static_cast<float>(settings.resolution) / range.y;
+
+  // *** Calculate the translation
+  glm::vec2 translation = {
+    (static_cast<float>(settings.resolution) - scale * range.x) / 2,
+    (static_cast<float>(settings.resolution) - scale * range.y) / 2
+  };
+
   // *** Upload the graph to the gpu
   auto [pointsRes, edgeIndicesRes, edgeLengthsRes] =
-    internal::gpu::upload_graph(graph, settings.resolution);
+    internal::gpu::upload_graph(graph, offset, translation, scale);
 
   // *** Create the random states
   internal::random_states randomStates(512);
@@ -16,8 +33,8 @@ bundler::bundle(const graph_t& graph, const bundler::settings_t& settings)
   // *** Calculate the factor with which to decrease the bundling kernel size
   // every loop
   float kernelSizeScalingFactor =
-    pow(2.0f / settings.bundlingKernelSize,
-        1.0f / static_cast<float>(settings.bundlingIterations));
+    std::pow(2.0f / settings.bundlingKernelSize,
+             1.0f / static_cast<float>(settings.bundlingIterations));
 
   // *** Copy the kernel size from the setting as initial value
   float kernelSize = settings.bundlingKernelSize;
@@ -67,6 +84,7 @@ bundler::bundle(const graph_t& graph, const bundler::settings_t& settings)
     kernelSize *= kernelSizeScalingFactor;
   }
 
-  return internal::gpu::download_graph(pointsRes, edgeIndicesRes);
+  return internal::gpu::download_graph(
+    pointsRes, edgeIndicesRes, offset, translation, scale);
 }
 } // namespace cubu

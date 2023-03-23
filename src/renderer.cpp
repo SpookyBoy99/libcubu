@@ -1,9 +1,12 @@
 #include "cubu/renderer.hpp"
+#include <fcntl.h>
+#include <glad/glad.h>
+#include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/color_space.hpp>
 #include <glm/gtx/vector_angle.hpp>
 #include <glm/vec4.hpp>
+#include <queue>
 #include <stdexcept>
-#include "glad/glad.h"
 
 static const EGLint configAttribs[] = { EGL_SURFACE_TYPE,
                                         EGL_PBUFFER_BIT,
@@ -20,13 +23,17 @@ static const EGLint configAttribs[] = { EGL_SURFACE_TYPE,
                                         EGL_NONE };
 
 namespace cubu {
-renderer::renderer()
-  : eglDisplay_{}
+renderer::renderer(glm::ivec2 resolution)
+  : resolution_{ resolution }
+  , eglDisplay_{}
   , major_{}
   , minor_{}
   , numConfigs_{}
   , eglConfig_{}
   , eglContext_{}
+  , frameBuffer_{}
+  , colorBuffer_{}
+  , depthBuffer_{}
 {
   // *** Get a "virtual" EGL display
   eglDisplay_ = eglGetDisplay(EGL_DEFAULT_DISPLAY);
@@ -51,6 +58,51 @@ renderer::renderer()
   if (!gladLoadGL()) {
     throw std::runtime_error("Failed to initialize OpenGL Context.");
   }
+
+  // *** Generate the frame buffers and textures
+  glGenFramebuffers(1, &frameBuffer_);
+  glGenTextures(1, &colorBuffer_);
+  glGenRenderbuffers(1, &depthBuffer_);
+
+  // *** Bind the generated frame buffer
+  glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer_);
+
+  // *** Create a texture to bind the framebuffer to
+  glBindTexture(GL_TEXTURE_2D, colorBuffer_);
+  glTexImage2D(GL_TEXTURE_2D,
+               0,
+               GL_RGB8,
+               resolution_.x,
+               resolution_.y,
+               0,
+               GL_RGBA,
+               GL_UNSIGNED_BYTE,
+               nullptr);
+
+  // *** Enable linear filtering for the texture
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  // *** Attach the frame buffer to the image
+  glFramebufferTexture2D(
+    GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer_, 0);
+
+  // *** Attach the frame buffer to the depth image
+  glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer_);
+  glRenderbufferStorage(
+    GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, resolution_.x, resolution_.y);
+  glFramebufferRenderbuffer(
+    GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthBuffer_);
+
+  // *** Check the status of the framebuffer
+  switch (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER)) {
+    case GL_FRAMEBUFFER_COMPLETE:
+      break;
+    case GL_FRAMEBUFFER_UNSUPPORTED:
+      throw std::runtime_error("Unsupported framebuffer type.");
+    default:
+      throw std::runtime_error("Framebuffer Error");
+  }
 }
 
 renderer::~renderer()
@@ -59,26 +111,70 @@ renderer::~renderer()
 }
 
 void
-renderer::render_graph(const graph_t& graph, const settings_t& settings)
+renderer::render_graph(const graph& graph, const settings_t& settings) const
 {
-  // *** Create the buffers for the points and edge colors
-  std::vector<glm::vec2> vertexBuffer(graph.point_count());
-  std::vector<glm::vec4> colorBuffer(settings.drawEdges ? graph.point_count()
-                                                        : 0);
+  glm::vec3 pointColor{ 1.0f, 0.0f, 0.0f };
 
-//  const float rhoMax = settings.densityMax ? *settings.densityMax : 1;
+  // *** Get the offset
+  glm::vec2 offset = graph.bounds().min;
 
-  // *** Keep track of the current point index
-  size_t pointIndex = 0;
+  // *** Get the range of the graph
+  glm::vec2 range = graph.bounds().max - graph.bounds().min;
+
+  // *** Calculate the scale
+  float scale = range.x > range.y ? 2.0f / range.x : 2.0f / range.y;
+
+  // *** Calculate the translation
+  glm::vec2 translation = { (2.0f - scale * range.x) / 2 - 1.0f,
+                            (2.0f - scale * range.y) / 2 - 1.0f };
+
+  // *** Calculate the edge and point counts
+  size_t pointCount = graph.point_count(), edgeCount = graph.edges().size();
+
+  // *** Create a new vector for all the vertices
+  std::vector<glm::vec2> vertexBuffer;
+
+  // *** Allocate the memory for all the points and end of line markers
+  vertexBuffer.reserve(pointCount);
+
+  // *** Create a new vector for all the vertex colors
+  std::vector<glm::vec4> colorBuffer;
+
+  // *** Only reserve memory for the colors if the edges are drawn
+  if (settings.drawEdges) {
+    // *** Allocate the memory for all the points and end of line markers
+    colorBuffer.reserve(pointCount);
+  }
+
+  // *** Create a new vector for all the edge indices
+  std::vector<int> edgeIndices;
+
+  // *** Allocate the memory for the edge indices
+  edgeIndices.reserve(edgeCount);
+
+  // *** Create a new vector for all the draw order
+  std::vector<std::tuple<float, size_t>> drawOrder;
+
+  // *** Allocate the memory for the edge indices
+  drawOrder.reserve(edgeCount);
+
+  //  const float rhoMax = settings.densityMax ? *settings.densityMax : 1;
 
   // *** Loop over all the points in the graph
   for (const auto& line : graph.edges()) {
+    // *** Add the line to the draw order based on length
+    drawOrder.emplace_back(line->length(), edgeIndices.size());
+
+    // *** Add the starting point of the next polyline to the list of edge
+    // indices
+    edgeIndices.emplace_back(vertexBuffer.size());
+
     // *** Normalize the line length
     float normalizedLength = (line->length() - graph.range().min) /
                              (graph.range().max - graph.range().min);
 
     // *** Create the base color
-    glm::vec4 color;
+    glm::vec4 color{ 1.0f };
 
     // *** Update the color based on the selected profile if the color is the
     // same for the entire line:
@@ -139,12 +235,33 @@ renderer::render_graph(const graph_t& graph, const settings_t& settings)
       }
 
       // *** Add the points to the vertex buffer
-      vertexBuffer[pointIndex] = point;
-
-      // *** Increment the point index
-      pointIndex++;
+      vertexBuffer.emplace_back((point - offset) * scale + translation);
+      colorBuffer.emplace_back(color);
     }
   }
+
+  // *** Create a vector for the draw order
+  std::priority_queue<decltype(drawOrder)::value_type,
+                      std::vector<decltype(drawOrder)::value_type>,
+                      std::greater<>>
+    drawOrderQueue(std::greater<>(), std::move(drawOrder));
+
+  glBindTexture(GL_TEXTURE_2D, 0);
+  glEnable(GL_TEXTURE_2D);
+  glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer_);
+
+  glViewport(0, 0, resolution_.x, resolution_.y);
+
+  glClearColor(1, 1, 1, 1);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  glOrtho(-1, 1, -1, 1, -1, 1);
+  glScalef(1, -1, 1);
+
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity();
 
   // *** Enable blending and line smoothing
   glEnable(GL_BLEND);
@@ -155,11 +272,65 @@ renderer::render_graph(const graph_t& graph, const settings_t& settings)
   glEnable(GL_POINT_SMOOTH);
 
   // *** Set line and point sizes
-  glLineWidth(1.0);
-  glPointSize(1.5);
+  glLineWidth(1.0f);
+  glPointSize(1.5f);
 
-  // *** Specify the vertex attributes (e.g. positions and colors)
+  // *** Set the buffer pointers
   glVertexPointer(2, GL_FLOAT, 0, vertexBuffer.data());
-  glColorPointer(4, GL_UNSIGNED_BYTE, 0, colorBuffer.data());
+  glColorPointer(4, GL_FLOAT, 0, colorBuffer.data());
+
+  glEnableClientState(GL_VERTEX_ARRAY);
+
+  // *** Loop over all the values in the priority queue
+  while (!drawOrderQueue.empty()) {
+    // *** Get the index of the edge index
+    const size_t i = std::get<1>(drawOrderQueue.top());
+
+    // *** Pop the value
+    drawOrderQueue.pop();
+
+    // *** Get the index of the first point of the edge
+    const int pointIndexStart = edgeIndices[i],
+              pointIndexEnd = i == edgeCount - 1 ? static_cast<int>(pointCount)
+                                                 : edgeIndices[i + 1];
+
+    // *** Draw the edge
+    if (settings.drawEdges) {
+      glEnableClientState(GL_COLOR_ARRAY);
+      glDrawArrays(
+        GL_LINE_STRIP, pointIndexStart, pointIndexEnd - pointIndexStart);
+    }
+
+    // *** Draw the points
+    if (settings.drawPoints) {
+      glDisableClientState(GL_COLOR_ARRAY);
+      glColor3fv(glm::value_ptr(pointColor));
+      glDrawArrays(GL_POINTS, pointIndexStart, pointIndexEnd - pointIndexStart);
+    }
+  }
+
+  void* dumpbuf;
+  int dumpbuf_fd =
+    open("/tmp/fbodump.rgb", O_CREAT | O_SYNC | O_RDWR, S_IRUSR | S_IWUSR);
+  assert(-1 != dumpbuf_fd);
+  dumpbuf = malloc(resolution_.x * resolution_.y * 3);
+  assert(dumpbuf);
+
+  glReadBuffer(GL_COLOR_ATTACHMENT0);
+  glReadPixels(
+    0, 0, resolution_.x, resolution_.y, GL_RGB, GL_UNSIGNED_BYTE, dumpbuf);
+  lseek(dumpbuf_fd, SEEK_SET, 0);
+  write(dumpbuf_fd, dumpbuf, resolution_.x * resolution_.y * 3);
+
+  //  // *** Disable the vertex and color arrays
+  glDisableClientState(GL_VERTEX_ARRAY);
+  glDisableClientState(GL_COLOR_ARRAY);
+
+  // *** Disable the blending and line smoothing and reset all the values
+  glDisable(GL_BLEND);
+  glDisable(GL_LINE_SMOOTH);
+  glLineWidth(1.0f);
+  glPointSize(1.f);
+  glDisable(GL_POINT_SMOOTH);
 }
 } // namespace cubu

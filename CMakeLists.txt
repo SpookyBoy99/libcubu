@@ -25,26 +25,18 @@ include_directories(src)
 # -----------------------------------
 
 set(SOURCES
+        src/bundling/bundle.cu
+        src/bundling/edge_profile.cu
+        src/bundling/interpolate.cu
         src/internal/gpu/advect_points.cu
         src/internal/gpu/download_graph.cu
         src/internal/gpu/generate_density_map.cu
         src/internal/gpu/resample_edges.cu
         src/internal/gpu/smooth_edges.cu
         src/internal/gpu/upload_graph.cu
-        src/internal/kernels/advect_sites.cu
-        src/internal/kernels/convolution.cu
-        src/internal/kernels/init_random_states.cu
-        src/internal/kernels/generate_density_map_fast.cu
-        src/internal/kernels/generate_density_map_slow.cu
-        src/internal/kernels/resample_edges.cu
-        src/internal/kernels/calculate_resample_count.cu
-        src/internal/kernels/smooth_lines.cu
         src/internal/random_states.cu
-        src/types/edge_profile.cu
-        src/types/graph.cpp
-        src/types/polyline.cpp
-        src/bundler.cu
-        src/interpolator.cpp
+        src/graph.cpp
+        src/polyline.cpp
         src/renderer.cpp
         tests/main.cpp
         )
@@ -63,7 +55,6 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} ${LIBS})
 target_include_directories(${PROJECT_NAME} PUBLIC include)
 
-
 # -----------------------------------
 # Compiler settings
 # -----------------------------------
@@ -72,5 +63,9 @@ target_include_directories(${PROJECT_NAME} PUBLIC include)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CUDA_SEPARABLE_COMPILATION ON)
 target_compile_definitions(${PROJECT_NAME} PRIVATE GLM_FORCE_CUDA CUDA_VERSION=12000)
+target_compile_options(${PROJECT_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+        --diag-suppress 20012
+        --use_fast_math
+        >)
 
 

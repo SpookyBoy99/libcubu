@@ -1,21 +1,190 @@
 #include "cubu/internal/gpu.hpp"
 #include "cubu/internal/gpu_check.hpp"
-#include "cubu/internal/kernels.hpp"
 
 namespace cubu::internal {
+typedef enum convolution_direction
+  : char
+{
+  convolveColumns = 0,
+  convolveRows
+} convolution_direction_t;
+
+namespace kernels {
+__global__ void
+generateDensityMapFast(float* densityOutput,
+                       cudaTextureObject_t pointsTex,
+                       cudaTextureObject_t edgeIndicesTex,
+                       cudaTextureObject_t edgeLengthsTex,
+                       size_t pointCount,
+                       size_t edgeCount,
+                       size_t pitch)
+{
+  // *** Do nothing if no output is specified
+  if (!densityOutput) {
+    return;
+  }
+
+  // *** Get the index and stride from gpu
+  size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+  size_t stride = blockDim.x * gridDim.x;
+
+  // *** Loop over the edges
+  for (size_t i = index; i < edgeCount; i += stride) {
+    // *** Get the index of the first point of the edge
+    int pointIndexStart = tex1Dfetch<int>(edgeIndicesTex, static_cast<int>(i)),
+        pointIndexEnd =
+          i == edgeCount - 1
+            ? static_cast<int>(pointCount)
+            : tex1Dfetch<int>(edgeIndicesTex, static_cast<int>(i + 1));
+
+    // *** Keep track of a counter for the current point index
+    int pointIndex = pointIndexStart;
+
+    // *** Get the length of the current edge
+    auto edgeLength = tex1Dfetch<float>(edgeLengthsTex, static_cast<int>(i));
+
+    // *** Keep looping until the last point is reached
+    while (true) {
+      auto point = tex1Dfetch<float2>(pointsTex, pointIndex++);
+
+      // *** Check if the fetched point is the end of the line
+      if (pointIndex > pointIndexEnd) {
+        break;
+      }
+
+      // *** Calculate the index for the density image
+      int siteIndex = static_cast<int>(point.y) * static_cast<int>(pitch) +
+                      static_cast<int>(point.x);
+
+      // *** Add the edge length to the density input
+      densityOutput[siteIndex] += edgeLength;
+    }
+  }
+}
+
+__global__ void
+generateDensityMapCount(uint* countsOutput,
+                        cudaTextureObject_t pointsTex,
+                        cudaTextureObject_t edgeIndicesTex,
+                        size_t pointCount,
+                        size_t edgeCount,
+                        size_t pitch)
+{
+  // *** Do nothing if no countsOutput is specified
+  if (!countsOutput) {
+    return;
+  }
+
+  // *** Get the index and stride from gpu
+  size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+  size_t stride = blockDim.x * gridDim.x;
+
+  // *** Loop over the edges
+  for (size_t i = index; i < edgeCount; i += stride) {
+    // *** Get the index of the first point of the edge
+    int pointIndexStart = tex1Dfetch<int>(edgeIndicesTex, static_cast<int>(i)),
+        pointIndexEnd =
+          i == edgeCount - 1
+            ? static_cast<int>(pointCount)
+            : tex1Dfetch<int>(edgeIndicesTex, static_cast<int>(i + 1));
+
+    // *** Keep track of a counter for the current point index
+    int pointIndex = pointIndexStart;
+
+    // *** Keep looping until the last point is reached
+    while (true) {
+      auto point = tex1Dfetch<float2>(pointsTex, pointIndex++);
+
+      // *** Check if the fetched point is the end of the line
+      if (pointIndex > pointIndexEnd) {
+        break;
+      }
+
+      // *** Calculate the index for the density image
+      int siteIndex = static_cast<int>(point.y) * static_cast<int>(pitch) +
+                      static_cast<int>(point.x);
+
+      // *** Add the edge length to the density input
+      atomicAdd(&countsOutput[siteIndex], 1);
+    }
+  }
+}
+
+__global__ void
+convertDensityMapToFloat(float* densityOutput,
+                         cudaTextureObject_t densityCountsTex,
+                         int width,
+                         int height)
+{
+  // *** Do nothing if no countsOutput is specified
+  if (!densityOutput) {
+    return;
+  }
+
+  // *** Get the index and stride from gpu
+  size_t index_x = blockIdx.x * blockDim.x + threadIdx.x;
+  size_t stride_x = blockDim.x * gridDim.x;
+  size_t index_y = blockIdx.y * blockDim.y + threadIdx.y;
+  size_t stride_y = blockDim.y * gridDim.y;
+
+  for (size_t x = index_x; x < width; x += stride_x) {
+    for (size_t y = index_y; y < height; y += stride_y) {
+      densityOutput[y * width + x] =
+        static_cast<float>(tex1Dfetch<uint>(densityCountsTex, y * width + x));
+    }
+  }
+}
+
+__global__ void
+convolveDensityMap(float* output,
+                   cudaTextureObject_t densityTex,
+                   cudaTextureObject_t convolutionKernelTex,
+                   int width,
+                   int height,
+                   size_t pitch,
+                   int kernelRadius,
+                   convolution_direction_t direction)
+{
+  size_t index_x = blockIdx.x * blockDim.x + threadIdx.x;
+  size_t stride_x = blockDim.x * gridDim.x;
+  size_t index_y = blockIdx.y * blockDim.y + threadIdx.y;
+  size_t stride_y = blockDim.y * gridDim.y;
+
+  for (size_t x = index_x; x < width; x += stride_x) {
+    for (size_t y = index_y; y < height; y += stride_y) {
+      const float pixel_x = static_cast<float>(x) + 0.5f;
+      const float pixel_y = static_cast<float>(y) + 0.5f;
+
+      float sum = 0;
+
+      for (int k = -kernelRadius; k <= kernelRadius; ++k) {
+        sum +=
+          tex2D<float>(
+            densityTex,
+            pixel_x + static_cast<float>((direction == convolveRows) * k),
+            pixel_y + static_cast<float>((direction == convolveColumns) * k)) *
+          tex1Dfetch<float>(convolutionKernelTex, kernelRadius - k);
+      }
+
+      output[y * pitch + x] = sum;
+    }
+  }
+}
+} // namespace kernels
+
 resource_2d<float>
 gpu::generate_density_map(const linear_resource<glm::vec2>& pointsRes,
                           const linear_resource<int>& edgeIndicesRes,
                           const linear_resource<float>& edgeLengthsRes,
                           float kernelSize,
-                          const glm::ivec2& resolution,
+                          int resolution,
                           bool fastDensity)
 {
   // *** Get the edge count from the size of the edge indices resource
   size_t pointCount = pointsRes.size(), edgeCount = edgeIndicesRes.size();
 
   // *** Create a resource for the density map
-  resource_2d<float> densityMapRes(resolution.x, resolution.y);
+  resource_2d<float> densityMapRes(resolution, resolution);
 
   // *** Set to all zeros
   gpu_check cudaMemset2D(densityMapRes.dev_ptr(),
@@ -50,7 +219,7 @@ gpu::generate_density_map(const linear_resource<glm::vec2>& pointsRes,
       gpu_check cudaDeviceSynchronize();
     } else {
       // *** Create a texture for keeping track of the density count
-      resource_2d<uint> densityCountsRes(resolution.x, resolution.y);
+      resource_2d<uint> densityCountsRes(resolution, resolution);
 
       {
         // *** Configure the kernel execution parameters
@@ -79,14 +248,14 @@ gpu::generate_density_map(const linear_resource<glm::vec2>& pointsRes,
       {
         // *** Configure the kernel execution parameters
         dim3 blockSize(256, 256);
-        dim3 numBlocks((resolution.x + blockSize.x - 1) / blockSize.x,
-                       (resolution.y + blockSize.y - 1) / blockSize.y);
+        dim3 numBlocks((resolution + blockSize.x - 1) / blockSize.x,
+                       (resolution + blockSize.y - 1) / blockSize.y);
 
         kernels::convertDensityMapToFloat<<<blockSize, numBlocks>>>(
           densityMapRes.dev_ptr(),
           densityCountsRes.tex(),
-          resolution.x,
-          resolution.y);
+          resolution,
+          resolution);
 
         gpu_check cudaDeviceSynchronize();
       }
@@ -112,19 +281,19 @@ gpu::generate_density_map(const linear_resource<glm::vec2>& pointsRes,
 
     // *** Configure the kernel execution parameters
     dim3 blockSize(256, 256);
-    dim3 numBlocks((resolution.x + blockSize.x - 1) / blockSize.x,
-                   (resolution.y + blockSize.y - 1) / blockSize.y);
+    dim3 numBlocks((resolution + blockSize.x - 1) / blockSize.x,
+                   (resolution + blockSize.y - 1) / blockSize.y);
 
     {
       // *** Create a resource for the vertically convoluted density map
-      resource_2d<float> convDensityMapRes(resolution.x, resolution.y);
+      resource_2d<float> convDensityMapRes(resolution, resolution);
 
-      kernels::convolutionKernel<<<blockSize, numBlocks>>>(
+      kernels::convolveDensityMap<<<blockSize, numBlocks>>>(
         convDensityMapRes.dev_ptr(),
         densityMapRes.tex(),
         parabolicFilterKernelRes.tex(),
-        resolution.x,
-        resolution.y,
+        resolution,
+        resolution,
         convDensityMapRes.pitch(),
         kernelRadius,
         convolveRows);
@@ -141,14 +310,14 @@ gpu::generate_density_map(const linear_resource<glm::vec2>& pointsRes,
 
     {
       // *** Create a resource for the vertically convoluted density map
-      resource_2d<float> convDensityMapRes(resolution.x, resolution.y);
+      resource_2d<float> convDensityMapRes(resolution, resolution);
 
-      kernels::convolutionKernel<<<blockSize, numBlocks>>>(
+      kernels::convolveDensityMap<<<blockSize, numBlocks>>>(
         convDensityMapRes.dev_ptr(),
         densityMapRes.tex(),
         parabolicFilterKernelRes.tex(),
-        resolution.x,
-        resolution.y,
+        resolution,
+        resolution,
         convDensityMapRes.pitch(),
         kernelRadius,
         convolveColumns);

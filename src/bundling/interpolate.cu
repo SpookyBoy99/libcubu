@@ -1,27 +1,24 @@
-#include "cubu/interpolator.hpp"
 #include <glm/geometric.hpp>
 #include <glm/vec3.hpp>
+#include "cubu/bundling.hpp"
 
 namespace cubu {
-graph_t
-interpolator::interpolate(const graph_t& originalGraph,
-                          const graph_t& bundledGraph,
-                          settings_t settings)
+graph
+bundling::interpolate(const graph& originalGraph,
+                      const graph& bundledGraph,
+                      interpolation_settings_t settings)
 {
   // *** Create a vector for all the edges of the interpolated graph
-  std::vector<std::unique_ptr<polyline_t>> edges(bundledGraph.edges().size());
+  std::vector<std::unique_ptr<polyline>> edges(bundledGraph.edges().size());
 
   // *** Loop over all the edges in the source and bundled graph
   for (size_t i = 0; i < originalGraph.edges().size(); i++) {
     const auto& sourceEdge = originalGraph.edges()[i];
     const auto& targetEdge = bundledGraph.edges()[i];
 
-    float maxDisplacement =
-      settings.absoluteDisplacement
-        ? settings.displacementMax *
-            static_cast<float>(
-              std::min(settings.resolution.x, settings.resolution.y))
-        : settings.displacementMax * sourceEdge->length();
+    float maxDisplacement = settings.absoluteDisplacement
+                              ? settings.displacementMax
+                              : settings.displacementMax * sourceEdge->length();
 
     // *** Create a vector for all the points of the edge and the displacements
     std::vector<point_t> points(targetEdge->points().size());
@@ -96,9 +93,9 @@ interpolator::interpolate(const graph_t& originalGraph,
 
     // *** Create the new polyline from the points and displacements
     edges[i] =
-      std::make_unique<polyline_t>(std::move(points), std::move(displacements));
+      std::make_unique<polyline>(std::move(points), std::move(displacements));
   }
 
-  return graph_t{ std::move(edges) };
+  return graph{ std::move(edges) };
 }
 } // namespace cubu

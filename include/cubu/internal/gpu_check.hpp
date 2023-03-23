@@ -19,7 +19,11 @@ public:
   {
     if (err != cudaSuccess) {
       char str[256];
-      sprintf(str, "CUDA error at %s %d: %s\n", file_, line_, cudaGetErrorString(err));
+      sprintf(str,
+              "CUDA error at %s:%d: %s\n",
+              file_,
+              line_,
+              cudaGetErrorString(err));
       throw std::runtime_error(str);
     }
 
@@ -30,6 +34,6 @@ private:
   const char* file_;
   int line_;
 };
-} // namespace cubu::detail
+} // namespace cubu::internal
 
 #endif // CUBU_GPU_CHECK_HPP

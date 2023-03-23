@@ -1,36 +1,49 @@
-#include "../include/cubu/bundler.hpp"
-#include "../include/cubu/interpolator.hpp"
-#include "../include/cubu/renderer.hpp"
-#include "../include/cubu/types/graph.hpp"
+#include <iostream>
+#include "cubu/graph.hpp"
 #include "cubu/internal/gpu.hpp"
+#include "cubu/renderer.hpp"
 
 int
 main()
 {
   cubu::renderer renderer;
 
-  cubu::graph_t graph("data/3.US-1");
+  cubu::graph graph("data/3.US-1");
 
   if (!graph.is_open())
     throw std::runtime_error("Failed to open graph");
 
-  cubu::bundler::settings_t bundleSettings;
-  bundleSettings.edgeProfile = cubu::types::edge_profile::uniform(true);
-  bundleSettings.fastDensity = false;
+  cubu::bundling::bundling_settings bundlingSettings;
+//  bundlingSettings.bundlingKernelSize = 5.0f;
+  bundlingSettings.edgeProfile = cubu::bundling::edge_profile::uniform(true);
+  bundlingSettings.fastDensity = true;
 
-  cubu::graph_t bundledGraph = cubu::bundler::bundle(graph, bundleSettings);
+  cubu::graph bundledGraph = cubu::bundling::bundle(graph, bundlingSettings);
 
-  cubu::interpolator::settings_t interpolationSettings;
+  cubu::bundling::interpolation_settings interpolationSettings;
 
-  // *** Create an interpolated graph
-  cubu::graph_t interpolatedGraph =
-    cubu::interpolator::interpolate(graph, bundledGraph, interpolationSettings);
+//  // *** Create an interpolated graph
+//  cubu::graph interpolatedGraph =
+//    cubu::bundling::interpolate(graph, bundledGraph, interpolationSettings);
 
-  cubu::internal::gpu::generate_density_map();
-  // todo: generate density map
-  // todo: generate shading map
+  //  // todo: generate density map
+  //  // todo: generate shading map
+  //
+  //  // *** Dump the interpolated graph data
+  //  for (const auto& line : interpolatedGraph.edges()) {
+  //    std::cout << "--- [ Line ] ---" << std::endl;
+  //
+  //    for (size_t i = 0; i < line->points().size(); i++) {
+  //      const auto& p = line->at(i);
+  //      const auto& d = line->displacement(i);
+  //
+  //      std::cout << "pos = (x: " << p.x << ", y: " << p.y << "); displ = " <<
+  //      d << std::endl;
+  //    }
+  //  }
 
   cubu::renderer::settings_t renderSettings;
+  renderSettings.colorMode = cubu::renderer::color_mode::grayscale;
 
-  renderer.render_graph(interpolatedGraph, renderSettings);
+  renderer.render_graph(bundledGraph, renderSettings);
 }

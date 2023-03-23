@@ -1,8 +1,9 @@
-#include "../../include/cubu/types/edge_profile.hpp"
+#include <cmath>
+#include "cubu/bundling.hpp"
 
-namespace cubu::types {
-__host__ __device__ float
-edge_profile::operator()(size_t i, size_t size) const
+namespace cubu {
+cpu_gpu_func float
+bundling::edge_profile::operator()(size_t i, size_t size) const
 {
   switch (profileType_) {
     case profile_type::uniform:
@@ -22,19 +23,20 @@ edge_profile::operator()(size_t i, size_t size) const
   return 0;
 }
 
-edge_profile
-edge_profile::uniform(bool fixEndpoints)
+bundling::edge_profile
+bundling::edge_profile::uniform(bool fixEndpoints)
 {
   return edge_profile(profile_type_t::uniform, fixEndpoints);
 }
 
-edge_profile
-edge_profile::hourglass(bool fixEndpoints)
+bundling::edge_profile
+bundling::edge_profile::hourglass(bool fixEndpoints)
 {
   return edge_profile(profile_type_t::hourglass, fixEndpoints);
 }
 
-edge_profile::edge_profile(profile_type_t profileType, bool fixEndpoints)
+bundling::edge_profile::edge_profile(profile_type_t profileType,
+                                     bool fixEndpoints)
   : profileType_(profileType)
   , fixEndpoints_(fixEndpoints)
 {

@@ -1,7 +1,7 @@
-#include "../../include/cubu/types/graph.hpp"
+#include "cubu/graph.hpp"
 #include <fstream>
 
-namespace cubu::types {
+namespace cubu {
 graph::graph()
   : open_{ false }
   , bounds_{ glm::vec2{ std::numeric_limits<float>::max() },

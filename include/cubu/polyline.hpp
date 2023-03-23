@@ -11,7 +11,6 @@ namespace cubu {
  */
 typedef glm::vec2 point_t;
 
-namespace types {
 /**
  * Container for an edge of the graph.
  */
@@ -205,9 +204,6 @@ private:
   float length_;
   bounds_t bounds_;
 };
-}
-
-typedef types::polyline polyline_t;
 } // namespace cubu
 
 #endif // CUBU_POLYLINE_HPP

@@ -153,4 +153,4 @@ linear_resource<T>::operator bool() const
 {
   return initialized_;
 }
-} // namespace cubu
+} // namespace cubu::internal

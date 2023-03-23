@@ -3,11 +3,11 @@
 
 #include <glm/vec2.hpp>
 #include <tuple>
+#include "cubu/bundling.hpp"
+#include "cubu/graph.hpp"
 #include "cubu/internal/linear_resource.hpp"
 #include "cubu/internal/random_states.hpp"
 #include "cubu/internal/resource_2d.hpp"
-#include "cubu/types/edge_profile.hpp"
-#include "cubu/types/graph.hpp"
 
 namespace cubu::internal {
 struct gpu
@@ -15,8 +15,10 @@ struct gpu
   /**
    * Transforms the graph into a format usable for the gpu and uploads it.
    *
-   * @param graph      Graph to upload to the gpu.
-   * @param resolution Resolution to scale the graph to.
+   * @param graph       Graph to upload to the gpu.
+   * @param offset      Offset of the non-normalized graph.
+   * @param translation Translation that needs to be applied before uploading.
+   * @param scale       Scaling that needs to be applied before uploading.
    *
    * @returns Tuple of linear gpu resources containing the points, indices of
    *          each line and lengths of each line.
@@ -24,7 +26,10 @@ struct gpu
   static std::tuple<linear_resource<glm::vec2>,
                     linear_resource<int>,
                     linear_resource<float>>
-  upload_graph(const graph_t& graph, const glm::uvec2& resolution);
+  upload_graph(const graph& graph,
+               const glm::vec2& offset = {},
+               const glm::vec2& translation = {},
+               float scale = 1.0f);
 
   /**
    * Downloads the point and edge data from the gpu and transforms it into a
@@ -36,8 +41,11 @@ struct gpu
    *
    * @returns Graph object.
    */
-  static graph_t download_graph(const linear_resource<glm::vec2>& pointsRes,
-                                const linear_resource<int>& edgeIndicesRes);
+  static graph download_graph(const linear_resource<glm::vec2>& pointsRes,
+                              const linear_resource<int>& edgeIndicesRes,
+                              const glm::vec2& offset = {},
+                              const glm::vec2& translation = {},
+                              float scale = 1.0f);
 
   /**
    * Resamples an existing graph.
@@ -80,7 +88,7 @@ struct gpu
     const linear_resource<int>& edgeIndicesRes,
     const linear_resource<float>& edgeLengthsRes,
     float kernelSize,
-    const glm::ivec2& resolution,
+    int resolution,
     bool fastDensity);
 
   /**
@@ -99,7 +107,7 @@ struct gpu
     const linear_resource<glm::vec2>& pointsRes,
     const linear_resource<int>& edgeIndicesRes,
     const resource_2d<float>& densityMapRes,
-    const cubu::types::edge_profile& edgeProfile,
+    const bundling::edge_profile& edgeProfile,
     float kernelSize);
 
   /**
@@ -120,11 +128,11 @@ struct gpu
   static linear_resource<glm::vec2> smooth_edges(
     const linear_resource<glm::vec2>& pointsRes,
     const linear_resource<int>& edgeIndicesRes,
-    const edge_profile_t& edgeProfile,
+    const bundling::edge_profile& edgeProfile,
     float smoothingKernelFrac,
     float samplingStep,
     float smoothness,
-    const glm::uvec2& resolution);
+    int resolution);
 
   /**
    * Static class, delete constructor.

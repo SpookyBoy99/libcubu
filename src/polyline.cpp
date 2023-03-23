@@ -1,7 +1,7 @@
-#include "../../include/cubu/types/polyline.hpp"
+#include "cubu/polyline.hpp"
 #include <glm/geometric.hpp>
 
-namespace cubu::types {
+namespace cubu {
 polyline::polyline()
   : length_{ 0 }
   , bounds_{ glm::vec2{ std::numeric_limits<float>::max() },
@@ -167,4 +167,4 @@ polyline::calculate_properties()
     bounds_.max.y = std::max(bounds_.max.y, points_[i].y);
   }
 }
-} // namespace cubu::types
+} // namespace cubu

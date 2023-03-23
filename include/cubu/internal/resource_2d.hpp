@@ -176,7 +176,7 @@ private:
   cudaResourceDesc texRes_;
   cudaTextureDesc texDescr_;
 };
-} // namespace cubu
+} // namespace cubu::internal
 
 #include "cubu/impl/internal/resource_2d.ipp"
 #else
