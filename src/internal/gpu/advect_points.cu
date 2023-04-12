@@ -1,5 +1,5 @@
 #include "cubu/internal/gpu.hpp"
-#include "cubu/internal/gpu_check.hpp"
+#include "cubu/internal/validate.hpp"
 
 namespace cubu::internal {
 namespace kernels {
@@ -95,10 +95,10 @@ gpu::advect_points(const linear_resource<glm::vec2>& pointsRes,
     kernelSize);
 
   // *** Check kernel launch
-  gpu_check cudaPeekAtLastError();
+  validate cudaPeekAtLastError();
 
   // *** Synchronise the kernel
-  gpu_check cudaDeviceSynchronize();
+  validate cudaDeviceSynchronize();
 
   return advectedPointsRes;
 }

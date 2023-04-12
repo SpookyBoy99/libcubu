@@ -1,4 +1,4 @@
-#include "cubu/internal/gpu_check.hpp"
+#include "cubu/internal/validate.hpp"
 
 namespace cubu::internal {
 template<class T>
@@ -23,7 +23,7 @@ resource_2d<T>::resource_2d(int width, int height, cudaChannelFormatDesc desc)
 {
 
   // *** Allocate memory for the device data
-  gpu_check cudaMallocPitch(
+  validate cudaMallocPitch(
     (void**)&devData_, &pitch_, width * sizeof(T), height);
 
   // *** Configure the resource description
@@ -35,7 +35,7 @@ resource_2d<T>::resource_2d(int width, int height, cudaChannelFormatDesc desc)
   texRes_.res.pitch2D.pitchInBytes = pitch_;
 
   // *** Create the texture object
-  gpu_check cudaCreateTextureObject(&tex_, &texRes_, &texDescr_, nullptr);
+  validate cudaCreateTextureObject(&tex_, &texRes_, &texDescr_, nullptr);
 }
 
 template<class T>
@@ -98,8 +98,8 @@ resource_2d<T>::~resource_2d()
     return;
   }
 
-  gpu_check cudaDestroyTextureObject(tex_);
-  gpu_check cudaFree(devData_);
+  validate cudaDestroyTextureObject(tex_);
+  validate cudaFree(devData_);
 }
 
 template<class T>
@@ -117,7 +117,7 @@ template<class T>
 void
 resource_2d<T>::copy_to_device(const T* hostData)
 {
-  gpu_check cudaMemcpy2D(devData_,
+  validate cudaMemcpy2D(devData_,
                          pitch_,
                          hostData,
                          width_ * sizeof(T),
@@ -141,7 +141,7 @@ template<class T>
 void
 resource_2d<T>::copy_to_host(T* destData)
 {
-  gpu_check cudaMemcpy2D(destData,
+  validate cudaMemcpy2D(destData,
                          width_ * sizeof(T),
                          devData_,
                          pitch_,

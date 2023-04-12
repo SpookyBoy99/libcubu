@@ -1,4 +1,4 @@
-#include "cubu/internal/gpu_check.hpp"
+#include "cubu/internal/validate.hpp"
 
 namespace cubu::internal {
 template<class T>
@@ -20,7 +20,7 @@ linear_resource<T>::linear_resource(size_t size, cudaChannelFormatDesc desc)
   , texDescr_{}
 {
   // *** Allocate memory for the device data
-  gpu_check cudaMalloc((void**)&devData_, size * sizeof(T));
+  validate cudaMalloc((void**)&devData_, size * sizeof(T));
 
   // *** Configure the resource description
   texRes_.resType = cudaResourceTypeLinear;
@@ -29,7 +29,7 @@ linear_resource<T>::linear_resource(size_t size, cudaChannelFormatDesc desc)
   texRes_.res.linear.sizeInBytes = size * sizeof(T);
 
   // *** Create the texture object
-  gpu_check cudaCreateTextureObject(&tex_, &texRes_, &texDescr_, nullptr);
+  validate cudaCreateTextureObject(&tex_, &texRes_, &texDescr_, nullptr);
 }
 
 template<class T>
@@ -85,8 +85,8 @@ linear_resource<T>::~linear_resource()
     return;
   }
 
-  gpu_check cudaDestroyTextureObject(tex_);
-  gpu_check cudaFree(devData_);
+  validate cudaDestroyTextureObject(tex_);
+  validate cudaFree(devData_);
 }
 
 template<class T>
@@ -104,7 +104,7 @@ template<class T>
 void
 linear_resource<T>::copy_to_device(const T* hostData) const
 {
-  gpu_check cudaMemcpy(
+  validate cudaMemcpy(
     devData_, hostData, size_ * sizeof(T), cudaMemcpyHostToDevice);
 }
 
@@ -123,7 +123,7 @@ template<class T>
 void
 linear_resource<T>::copy_to_host(T* destData) const
 {
-  gpu_check cudaMemcpy(
+  validate cudaMemcpy(
     destData, devData_, size_ * sizeof(T), cudaMemcpyDeviceToHost);
 }
 

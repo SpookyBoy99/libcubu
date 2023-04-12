@@ -1,5 +1,5 @@
 #include "cubu/internal/gpu.hpp"
-#include "cubu/internal/gpu_check.hpp"
+#include "cubu/internal/validate.hpp"
 
 namespace cubu::internal {
 namespace kernels {
@@ -234,8 +234,8 @@ gpu::resample_edges(const linear_resource<glm::vec2>& pointsRes,
 
   // *** Allocate the edges sample count output array
   int* d_edgesSampleCount;
-  gpu_check cudaMalloc((void**)&d_edgesSampleCount,
-                       edgeCount * sizeof(d_edgesSampleCount[0]));
+  validate cudaMalloc((void**)&d_edgesSampleCount,
+                      edgeCount * sizeof(d_edgesSampleCount[0]));
 
   // *** Call the kernel
   kernels::calculateResampleCount<<<numBlocks, blockSize>>>(
@@ -247,24 +247,24 @@ gpu::resample_edges(const linear_resource<glm::vec2>& pointsRes,
     samplingStep);
 
   // *** Check kernel launch
-  gpu_check cudaPeekAtLastError();
+  validate cudaPeekAtLastError();
 
   // *** Synchronise the kernel
-  gpu_check cudaDeviceSynchronize();
+  validate cudaDeviceSynchronize();
 
   // *** Allocate a vector for the edge sample points
   std::vector<std::decay<decltype(*d_edgesSampleCount)>::type>
     h_edgesSampleCounts(edgeCount);
 
   // *** Copy the edges to
-  gpu_check cudaMemcpy(h_edgesSampleCounts.data(),
-                       d_edgesSampleCount,
-                       edgeCount *
-                         sizeof(decltype(h_edgesSampleCounts)::value_type),
-                       cudaMemcpyDeviceToHost);
+  validate cudaMemcpy(h_edgesSampleCounts.data(),
+                      d_edgesSampleCount,
+                      edgeCount *
+                        sizeof(decltype(h_edgesSampleCounts)::value_type),
+                      cudaMemcpyDeviceToHost);
 
   // *** Free the device sample points
-  gpu_check cudaFree(d_edgesSampleCount);
+  validate cudaFree(d_edgesSampleCount);
 
   // *** Get the count for the previous edge
   auto previousSampleCount = h_edgesSampleCounts.front();
@@ -311,10 +311,10 @@ gpu::resample_edges(const linear_resource<glm::vec2>& pointsRes,
     randomStates.data());
 
   // *** Check kernel launch
-  gpu_check cudaPeekAtLastError();
+  validate cudaPeekAtLastError();
 
   // *** Synchronise the kernel
-  gpu_check cudaDeviceSynchronize();
+  validate cudaDeviceSynchronize();
 
   return { std::move(resampledPointsRes), std::move(resampledEdgeIndices) };
 }

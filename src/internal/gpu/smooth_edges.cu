@@ -1,5 +1,5 @@
 #include "cubu/internal/gpu.hpp"
-#include "cubu/internal/gpu_check.hpp"
+#include "cubu/internal/validate.hpp"
 
 namespace cubu::internal {
 namespace kernels {
@@ -103,11 +103,11 @@ gpu::smooth_edges(const linear_resource<glm::vec2>& pointsRes,
   if (L == 0) {
     // *** Simply copy the points res over to the smoothed points res if the
     // laplacian filter is zero
-    gpu_check cudaMemcpy(
-      smoothedPointsRes.dev_ptr(),
-      pointsRes.dev_ptr(),
-      pointsRes.size() * sizeof(std::decay_t<decltype(pointsRes)>::value_type),
-      cudaMemcpyDeviceToDevice);
+    validate cudaMemcpy(smoothedPointsRes.dev_ptr(),
+                        pointsRes.dev_ptr(),
+                        pointsRes.size() *
+                          sizeof(std::decay_t<decltype(pointsRes)>::value_type),
+                        cudaMemcpyDeviceToDevice);
 
     return smoothedPointsRes;
   }
@@ -124,10 +124,10 @@ gpu::smooth_edges(const linear_resource<glm::vec2>& pointsRes,
     smoothness);
 
   // *** Check kernel launch
-  gpu_check cudaPeekAtLastError();
+  validate cudaPeekAtLastError();
 
   // *** Synchronise the kernel
-  gpu_check cudaDeviceSynchronize();
+  validate cudaDeviceSynchronize();
 
   return smoothedPointsRes;
 }

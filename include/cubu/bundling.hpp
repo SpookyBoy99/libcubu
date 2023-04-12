@@ -86,6 +86,12 @@ public:
      * bundles. */
     float bundlingKernelSize{ 32.0f };
 
+    /**
+     * Advection step size as a fraction of the kernel sizes [0,1]. Controls
+     * speed of the bundling.
+     */
+    float advectionStepFactor{ 0.5f };
+
     /** Sampling step (pixels) of polylines. */
     float samplingStep{ 15.0f };
 
@@ -95,20 +101,8 @@ public:
      */
     float jitter{ 0.25f };
 
-    /**
-     * Flag indicating whether to use  polyline-style bundling or classical
-     * smooth bundling.
-     */
-    bool polylineStyle{ false };
-
-    /**
-     * Flag indicating whether the fast density approximation must be used or
-     * exact density maps.
-     */
-    bool fastDensity{ true };
-
     /** 1D function describing bundling strength along an edge. */
-    edge_profile edgeProfile{ edge_profile::uniform() };
+    edge_profile edgeProfile{ edge_profile::uniform( true ) };
 
     /** Laplacian smoothing kernel width ([0,1]), fraction of image width. */
     float smoothingKernelFrac{ 0.05f };

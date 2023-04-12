@@ -1,3 +1,5 @@
+#include <fstream>
+#include <iostream>
 #include "cubu/bundling.hpp"
 #include "cubu/internal/gpu.hpp"
 #include "cubu/internal/random_states.hpp"
@@ -41,16 +43,13 @@ bundling::bundle(const graph& graph, const bundling_settings_t& settings)
 
   // *** Iteratively bundle the edges
   for (size_t i = 0; i < settings.bundlingIterations; i++) {
-    // *** Resample only the first step or when not bundling poly-lines
-    if (i == 0 || !settings.polylineStyle) {
-      // *** Resample the graph
-      std::tie(pointsRes, edgeIndicesRes) =
-        internal::gpu::resample_edges(pointsRes,
-                                      edgeIndicesRes,
-                                      randomStates,
-                                      settings.samplingStep,
-                                      settings.jitter);
-    }
+    // *** Resample the graph
+    std::tie(pointsRes, edgeIndicesRes) =
+      internal::gpu::resample_edges(pointsRes,
+                                    edgeIndicesRes,
+                                    randomStates,
+                                    settings.samplingStep,
+                                    settings.jitter);
 
     // *** Generate the density map from the resampled points
     auto densityMapRes =
@@ -58,18 +57,15 @@ bundling::bundle(const graph& graph, const bundling_settings_t& settings)
                                           edgeIndicesRes,
                                           edgeLengthsRes,
                                           kernelSize,
-                                          settings.resolution,
-                                          settings.fastDensity);
-
-    std::vector<float> densityMapValues;
-    densityMapRes.copy_to_host(densityMapValues);
+                                          settings.resolution);
 
     // *** Advect the points
-    pointsRes = internal::gpu::advect_points(pointsRes,
-                                             edgeIndicesRes,
-                                             densityMapRes,
-                                             settings.edgeProfile,
-                                             kernelSize);
+    pointsRes =
+      internal::gpu::advect_points(pointsRes,
+                                   edgeIndicesRes,
+                                   densityMapRes,
+                                   settings.edgeProfile,
+                                   kernelSize * settings.advectionStepFactor);
 
     // *** Perform smoothing
     pointsRes = internal::gpu::smooth_edges(pointsRes,

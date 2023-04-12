@@ -14,33 +14,31 @@ main()
     throw std::runtime_error("Failed to open graph");
 
   cubu::bundling::bundling_settings bundlingSettings;
-//  bundlingSettings.bundlingKernelSize = 5.0f;
   bundlingSettings.edgeProfile = cubu::bundling::edge_profile::uniform(true);
-  bundlingSettings.fastDensity = true;
 
   cubu::graph bundledGraph = cubu::bundling::bundle(graph, bundlingSettings);
 
   cubu::bundling::interpolation_settings interpolationSettings;
 
-//  // *** Create an interpolated graph
-//  cubu::graph interpolatedGraph =
-//    cubu::bundling::interpolate(graph, bundledGraph, interpolationSettings);
+  // *** Create an interpolated graph
+  cubu::graph interpolatedGraph =
+    cubu::bundling::interpolate(graph, bundledGraph, interpolationSettings);
 
-  //  // todo: generate density map
-  //  // todo: generate shading map
+  // todo: generate density map
+  // todo: generate shading map
+
+  //    // *** Dump the interpolated graph data
+  //    for (const auto& line : interpolatedGraph.edges()) {
+  //      std::cout << "--- [ Line ] ---" << std::endl;
   //
-  //  // *** Dump the interpolated graph data
-  //  for (const auto& line : interpolatedGraph.edges()) {
-  //    std::cout << "--- [ Line ] ---" << std::endl;
+  //      for (size_t i = 0; i < line->points().size(); i++) {
+  //        const auto& p = line->at(i);
+  //        const auto& d = line->displacement(i);
   //
-  //    for (size_t i = 0; i < line->points().size(); i++) {
-  //      const auto& p = line->at(i);
-  //      const auto& d = line->displacement(i);
-  //
-  //      std::cout << "pos = (x: " << p.x << ", y: " << p.y << "); displ = " <<
-  //      d << std::endl;
+  //        std::cout << "pos = (x: " << p.x << ", y: " << p.y << "); displ = "
+  //        << d << std::endl;
+  //      }
   //    }
-  //  }
 
   cubu::renderer::settings_t renderSettings;
   renderSettings.colorMode = cubu::renderer::color_mode::grayscale;

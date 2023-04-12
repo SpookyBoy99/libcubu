@@ -1,21 +1,21 @@
-#ifndef CUBU_GPU_CHECK_HPP
-#define CUBU_GPU_CHECK_HPP
+#ifndef CUBU_VALIDATE_HPP
+#define CUBU_VALIDATE_HPP
 
 #include <stdexcept>
 
-#define gpu_check (cubu::internal::_gpu_check(__FILE__, __LINE__)) =
+#define validate (cubu::internal::_gpu_validate(__FILE__, __LINE__)) =
 
 namespace cubu::internal {
-class _gpu_check
+class _gpu_validate
 {
 public:
-  _gpu_check(const char* file, int line)
+  _gpu_validate(const char* file, int line)
     : file_(file)
     , line_(line)
   {
   }
 
-  _gpu_check& operator=(cudaError_t err)
+  _gpu_validate& operator=(cudaError_t err)
   {
     if (err != cudaSuccess) {
       char str[256];
@@ -36,4 +36,4 @@ private:
 };
 } // namespace cubu::internal
 
-#endif // CUBU_GPU_CHECK_HPP
+#endif // CUBU_VALIDATE_HPP

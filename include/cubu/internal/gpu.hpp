@@ -88,8 +88,7 @@ struct gpu
     const linear_resource<int>& edgeIndicesRes,
     const linear_resource<float>& edgeLengthsRes,
     float kernelSize,
-    int resolution,
-    bool fastDensity);
+    int resolution);
 
   /**
    * Advects points using the density map information.
