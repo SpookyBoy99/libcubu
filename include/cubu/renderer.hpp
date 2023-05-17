@@ -3,6 +3,7 @@
 
 #include <EGL/egl.h>
 #include <glad/glad.h>
+#include <png++/image.hpp>
 #include "cubu/graph.hpp"
 
 namespace cubu {
@@ -41,7 +42,9 @@ public:
   renderer(renderer&&) = delete;                 // disable move constructor
   renderer& operator=(renderer&&) = delete;      // disable move assignment
 
-  void render_graph(const graph& graph, const settings_t& settings) const;
+  [[nodiscard]] png::image<png::rgba_pixel> render_graph(
+    const graph& graph,
+    const settings_t& settings) const;
 
 private:
   glm::ivec2 resolution_;

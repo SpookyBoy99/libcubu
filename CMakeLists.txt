@@ -7,6 +7,7 @@ project(CUBu VERSION "0.0.1" LANGUAGES CXX CUDA)
 
 find_package(CUDA REQUIRED)
 find_package(OpenGL REQUIRED COMPONENTS EGL)
+find_package(PNG REQUIRED)
 
 # -----------------------------------
 # Add the glad subdirectory
@@ -43,6 +44,7 @@ set(SOURCES
 
 set(LIBS
         OpenGL::EGL
+        PNG::PNG
         glad
         )
 

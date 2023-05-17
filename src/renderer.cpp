@@ -5,6 +5,7 @@
 #include <glm/gtx/color_space.hpp>
 #include <glm/gtx/vector_angle.hpp>
 #include <glm/vec4.hpp>
+#include <png++/png.hpp>
 #include <queue>
 #include <stdexcept>
 
@@ -110,7 +111,7 @@ renderer::~renderer()
   eglTerminate(eglDisplay_);
 }
 
-void
+png::image<png::rgba_pixel>
 renderer::render_graph(const graph& graph, const settings_t& settings) const
 {
   glm::vec3 pointColor{ 1.0f, 0.0f, 0.0f };
@@ -309,20 +310,36 @@ renderer::render_graph(const graph& graph, const settings_t& settings) const
     }
   }
 
-  void* dumpbuf;
-  int dumpbuf_fd =
-    open("/tmp/fbodump.rgb", O_CREAT | O_SYNC | O_RDWR, S_IRUSR | S_IWUSR);
-  assert(-1 != dumpbuf_fd);
-  dumpbuf = malloc(resolution_.x * resolution_.y * 3);
-  assert(dumpbuf);
+  // *** Create a buffer for the pixels
+  std::vector<unsigned char> image(resolution_.x * resolution_.y * 4);
 
-  glReadBuffer(GL_COLOR_ATTACHMENT0);
-  glReadPixels(
-    0, 0, resolution_.x, resolution_.y, GL_RGB, GL_UNSIGNED_BYTE, dumpbuf);
-  lseek(dumpbuf_fd, SEEK_SET, 0);
-  write(dumpbuf_fd, dumpbuf, resolution_.x * resolution_.y * 3);
+  // *** Read the screen image into the buffer
+  glReadPixels(0,
+               0,
+               resolution_.x,
+               resolution_.y,
+               GL_RGBA,
+               GL_UNSIGNED_BYTE,
+               image.data());
 
-  //  // *** Disable the vertex and color arrays
+  // *** Create a new empty png image
+  png::image<png::rgba_pixel> pngImage(resolution_.x, resolution_.y);
+
+  // *** Copy all the pixels to the image
+  for (int y = 0; y < resolution_.y; y++) {
+    for (int x = 0; x < resolution_.x; x++) {
+      // *** Calculate the index of the pixel
+      size_t i = (y * resolution_.x + x) * 4;
+
+      // *** Update said pixel
+      pngImage.set_pixel(
+        x,
+        y,
+        png::rgba_pixel(image[i], image[i + 1], image[i + 2], image[i + 3]));
+    }
+  }
+
+  // *** Disable the vertex and color arrays
   glDisableClientState(GL_VERTEX_ARRAY);
   glDisableClientState(GL_COLOR_ARRAY);
 
@@ -332,5 +349,8 @@ renderer::render_graph(const graph& graph, const settings_t& settings) const
   glLineWidth(1.0f);
   glPointSize(1.f);
   glDisable(GL_POINT_SMOOTH);
+
+  // *** Return the png image object
+  return pngImage;
 }
 } // namespace cubu

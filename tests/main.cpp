@@ -43,5 +43,7 @@ main()
   cubu::renderer::settings_t renderSettings;
   renderSettings.colorMode = cubu::renderer::color_mode::grayscale;
 
-  renderer.render_graph(bundledGraph, renderSettings);
+  auto renderedGraph = renderer.render_graph(interpolatedGraph, renderSettings);
+
+  renderedGraph.write("/tmp/screenshot.png");
 }
