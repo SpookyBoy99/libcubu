@@ -24,21 +24,11 @@ main()
   cubu::graph interpolatedGraph =
     cubu::bundling::interpolate(graph, bundledGraph, interpolationSettings);
 
+  // *** Displace the graph
+  interpolatedGraph = cubu::bundling::separate_bundles(interpolatedGraph, 0.02f);
+
   // todo: generate density map
   // todo: generate shading map
-
-  //    // *** Dump the interpolated graph data
-  //    for (const auto& line : interpolatedGraph.edges()) {
-  //      std::cout << "--- [ Line ] ---" << std::endl;
-  //
-  //      for (size_t i = 0; i < line->points().size(); i++) {
-  //        const auto& p = line->at(i);
-  //        const auto& d = line->displacement(i);
-  //
-  //        std::cout << "pos = (x: " << p.x << ", y: " << p.y << "); displ = "
-  //        << d << std::endl;
-  //      }
-  //    }
 
   cubu::renderer::settings_t renderSettings;
   renderSettings.colorMode = cubu::renderer::color_mode::grayscale;

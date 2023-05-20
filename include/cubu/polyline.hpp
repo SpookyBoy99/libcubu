@@ -155,7 +155,7 @@ public:
    *
    * @returns Polyline bounding box.
    */
-  [[nodiscard]] bounds_t bounds() const;
+  [[nodiscard]] const bounds_t& bounds() const;
 
   /**
    * Getter for the first and last point of the polyline.

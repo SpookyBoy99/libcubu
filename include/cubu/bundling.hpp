@@ -102,7 +102,7 @@ public:
     float jitter{ 0.25f };
 
     /** 1D function describing bundling strength along an edge. */
-    edge_profile edgeProfile{ edge_profile::uniform( true ) };
+    edge_profile edgeProfile{ edge_profile::uniform(true) };
 
     /** Laplacian smoothing kernel width ([0,1]), fraction of image width. */
     float smoothingKernelFrac{ 0.05f };
@@ -122,8 +122,6 @@ public:
     bool absoluteDisplacement{ false };
 
     float displacementMax{ 0.2f };
-
-    float directionalSeparation{ 0 };
 
     float relaxation{ 0 };
   } interpolation_settings_t;
@@ -151,6 +149,17 @@ public:
   static graph interpolate(const graph& originalGraph,
                            const graph& bundledGraph,
                            interpolation_settings_t settings);
+
+  /**
+   * Separates bundles by displacing points from their original location based
+   * on trails direction.
+   *
+   * @param bundledGraph Graph to separate the bundles of.
+   * @param displacement Separation distance for the bundles.
+   *
+   * @returns Graph with displaced (separated) bundles.
+   */
+  static graph separate_bundles(const cubu::graph& bundledGraph, float displacement);
 
   // todo: Implement method for generating the density and shading maps of the
   //   interpolated graph.

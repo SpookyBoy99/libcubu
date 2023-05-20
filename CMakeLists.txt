@@ -28,7 +28,8 @@ include_directories(src)
 set(SOURCES
         src/bundling/bundle.cu
         src/bundling/edge_profile.cu
-        src/bundling/interpolate.cu
+        src/bundling/interpolate.cpp
+        src/bundling/separate_bundles.cpp
         src/internal/gpu/advect_points.cu
         src/internal/gpu/download_graph.cu
         src/internal/gpu/generate_density_map.cu

@@ -110,7 +110,7 @@ polyline::length() const
   return length_;
 }
 
-polyline::bounds_t
+const polyline::bounds_t&
 polyline::bounds() const
 {
   return bounds_;

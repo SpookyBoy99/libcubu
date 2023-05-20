@@ -1,5 +1,4 @@
 #include <glm/geometric.hpp>
-#include <glm/vec3.hpp>
 #include "cubu/bundling.hpp"
 
 namespace cubu {
@@ -13,9 +12,11 @@ bundling::interpolate(const graph& originalGraph,
 
   // *** Loop over all the edges in the source and bundled graph
   for (size_t i = 0; i < originalGraph.edges().size(); i++) {
+    // *** Get the edge from both the original and bundeld graph
     const auto& originalEdge = originalGraph.edges()[i];
     const auto& bundledEdge = bundledGraph.edges()[i];
 
+    // *** Calculate the max displacement
     const float maxDisplacement =
       settings.absoluteDisplacement
         ? settings.displacementMax
@@ -36,6 +37,7 @@ bundling::interpolate(const graph& originalGraph,
     // *** Accumulate distance from starting point to current point
     float distanceToStart = 0;
 
+    // *** Loop over all points in the bundled edge except first and last
     for (size_t j = 1; j < bundledEdge->points().size() - 1; j++) {
       // *** Get the next point
       auto currentPoint = bundledEdge->at(j);
