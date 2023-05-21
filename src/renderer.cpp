@@ -192,7 +192,8 @@ renderer::render_graph(const graph& graph, const settings_t& settings) const
       }
       case color_mode::directional: {
         auto [from, to] = line->endpoints();
-        glm::vec3 hsv{ glm::angle(from, to),
+        glm::vec3 hsv{ glm::degrees(
+                         glm::angle(glm::normalize(from), glm::normalize(to))),
                        std::pow(normalizedLength, 0.3f),
                        1.0f };
 
@@ -216,15 +217,20 @@ renderer::render_graph(const graph& graph, const settings_t& settings) const
       }
     }
 
-    //    // 2. Determine edge transparency
-    //    float2alpha(1 - val, alpha); // Edge base-alpha maps edge length
-    //    alpha *= global_alpha;       // Modulate above with global
-    //    transparency
+    for (size_t i = 0; i < line->points().size(); i++) {
+      // *** Get the point
+      const auto& point = line->points()[i];
 
-    for (const auto& point : line->points()) {
+      // *** Calculate t
+      auto t =
+        static_cast<float>(i) / static_cast<float>(line->points().size() - 1);
+      assert(t <= 1);
+      t = 0.2f + 0.8f * std::pow(1.0f - 2.0f * std::abs(t - 0.5f), 0.5f);
+      t = normalizedLength + (1.0f - normalizedLength) * 0.5f * t;
+
       // *** Only process colors if the edges are drawn
       if (settings.drawEdges) {
-        // *** Update the color if it is is a per vertex based color
+        // *** Update the color if it is a per vertex based color
         switch (settings.colorMode) {
           case color_mode::density_map:
             // float2rgb rho <- densityMap[x, y] / maxrho
@@ -237,7 +243,10 @@ renderer::render_graph(const graph& graph, const settings_t& settings) const
 
       // *** Add the points to the vertex buffer
       vertexBuffer.emplace_back((point - offset) * scale + translation);
-      colorBuffer.emplace_back(color);
+      colorBuffer.emplace_back(
+        color *
+        glm::vec4{ glm::vec3{ t },
+                   (1.0f - normalizedLength) + normalizedLength * t * 0.5f });
     }
   }
 
