@@ -25,13 +25,13 @@ main()
     cubu::bundling::interpolate(graph, bundledGraph, interpolationSettings);
 
   // *** Displace the graph
-//  interpolatedGraph = cubu::bundling::separate_bundles(interpolatedGraph, 0.02f);
+  interpolatedGraph = cubu::bundling::separate_bundles(interpolatedGraph, 0.02f);
 
   // todo: generate density map
   // todo: generate shading map
 
   cubu::renderer::settings_t renderSettings;
-  renderSettings.colorMode = cubu::renderer::color_mode::rainbow;
+  renderSettings.colorMode = cubu::renderer::color_mode::directional;
 
   auto renderedGraph = renderer.render_graph(interpolatedGraph, renderSettings);
 
