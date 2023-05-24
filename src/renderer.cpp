@@ -191,13 +191,19 @@ renderer::render_graph(const graph& graph, const settings_t& settings) const
         break;
       }
       case color_mode::directional: {
+        // *** Get the endpoints of the trail to calculate the general direction of the trail
         auto [from, to] = line->endpoints();
-        glm::vec3 hsv{ glm::degrees(
-                         glm::angle(glm::normalize(from), glm::normalize(to))),
-                       std::pow(normalizedLength, 0.3f),
-                       1.0f };
 
-        // *** Update the color
+        // *** Calculate the angle between the vector from the start point to
+        // the end point and the (inverted) x-axis
+        auto angle = glm::degrees(
+          glm::orientedAngle(glm::normalize(to - from), glm::vec2{ -1, 0 }));
+
+        // *** Convert the angle range from [-180, 180] to [0, 360] for the hue,
+        // and set the saturation and value as well
+        glm::vec3 hsv{ 180 - angle, std::pow(normalizedLength, 0.3f), 1.0f };
+
+        // *** Convert the color from hsv to rgb and apply
         color = { glm::rgbColor(hsv), color.a };
         break;
       }
