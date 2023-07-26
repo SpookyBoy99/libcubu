@@ -13,6 +13,9 @@ main()
   if (!graph.is_open())
     throw std::runtime_error("Failed to open graph");
 
+  printf("Edges: %zu, points: %zu\n", graph.size(), graph.point_count());
+  printf("Min: %f, max: %f\n", graph.range().min, graph.range().max);
+
   cubu::bundling::bundling_settings bundlingSettings;
   bundlingSettings.edgeProfile = cubu::bundling::edge_profile::uniform(true);
 

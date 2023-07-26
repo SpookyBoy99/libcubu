@@ -8,28 +8,30 @@ bundling::interpolate(const graph& originalGraph,
                       interpolation_settings_t settings)
 {
   // *** Create a vector for all the edges of the interpolated graph
-  std::vector<std::unique_ptr<polyline>> edges(bundledGraph.edges().size());
+  std::vector<polyline> edges;
+
+  // *** Allocate the memory beforehand
+  edges.reserve(bundledGraph.size());
 
   // *** Loop over all the edges in the source and bundled graph
-  for (size_t i = 0; i < originalGraph.edges().size(); i++) {
+  for (size_t i = 0; i < originalGraph.size(); i++) {
     // *** Get the edge from both the original and bundeld graph
-    const auto& originalEdge = originalGraph.edges()[i];
-    const auto& bundledEdge = bundledGraph.edges()[i];
+    const auto& originalEdge = originalGraph[i];
+    const auto& bundledEdge = bundledGraph[i];
 
     // *** Calculate the max displacement
     const float maxDisplacement =
       settings.absoluteDisplacement
         ? settings.displacementMax
-        : settings.displacementMax * originalEdge->length();
+        : settings.displacementMax * originalEdge.length();
 
     // *** Create a vector for all the points of the edge and the displacements
-    std::vector<point_t> points(bundledEdge->points().size());
-    std::vector<float> displacements(bundledEdge->points().size());
+    std::vector<point_t> points(bundledEdge.size());
+    std::vector<float> displacements(bundledEdge.size());
 
     // *** Copy the first and last points from the original target edge as they
     // are not interpolated
-    points.front() = bundledEdge->points().front();
-    points.back() = bundledEdge->points().back();
+    std::tie(points.front(), points.back()) = bundledEdge.endpoints();
 
     // *** Get the previous point
     auto previousPoint = points.front();
@@ -38,30 +40,29 @@ bundling::interpolate(const graph& originalGraph,
     float distanceToStart = 0;
 
     // *** Loop over all points in the bundled edge except first and last
-    for (size_t j = 1; j < bundledEdge->points().size() - 1; j++) {
+    for (size_t j = 1; j < bundledEdge.size() - 1; j++) {
       // *** Get the next point
-      auto currentPoint = bundledEdge->at(j);
+      const auto& currentPoint = bundledEdge.at(j);
 
       // *** Calculate the distance between the previous and current point and
       // add it to the accumulated distance from the start
       distanceToStart += glm::distance(previousPoint, currentPoint);
 
       // *** Calculate the arc-length of the i-th point of the target edge [0,1]
-      const float t = distanceToStart / bundledEdge->length();
+      const float t = distanceToStart / bundledEdge.length();
 
       // *** Calculate the corresponding index for the source (resampled target
       // line has more points)
-      auto k = static_cast<size_t>(
-        t * static_cast<float>(originalEdge->points().size() - 1));
+      auto k =
+        static_cast<size_t>(t * static_cast<float>(originalEdge.size() - 1));
 
       // *** Calculate how far between the current and next point from the
       // source it is (assuming linear uniform sampling of the target)
-      const float u = t * static_cast<float>(originalEdge->points().size() - 1) -
-                      static_cast<float>(k);
+      const float u =
+        t * static_cast<float>(originalEdge.size() - 1) - static_cast<float>(k);
 
       // *** Calculate the interpolated point position
-      glm::vec2 p =
-        originalEdge->points()[k] * (1 - u) + originalEdge->points()[k + 1] * u;
+      glm::vec2 p = originalEdge[k] * (1 - u) + originalEdge[k + 1] * u;
 
       // *** Store the displacement distance
       const float displacementDistance = glm::distance(currentPoint, p);
@@ -87,8 +88,7 @@ bundling::interpolate(const graph& originalGraph,
     }
 
     // *** Create the new polyline from the points and displacements
-    edges[i] =
-      std::make_unique<polyline>(std::move(points), std::move(displacements));
+    edges.emplace_back(std::move(points), std::move(displacements));
   }
 
   return graph{ std::move(edges) };

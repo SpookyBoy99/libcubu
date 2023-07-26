@@ -1,5 +1,6 @@
 #include "cubu/graph.hpp"
 #include <fstream>
+#include <optional>
 
 namespace cubu {
 graph::graph()
@@ -12,22 +13,27 @@ graph::graph()
 {
 }
 
-graph::graph(std::vector<std::unique_ptr<polyline>> lines)
+graph::graph(const std::string& path, bool endpointsOnly)
+  : graph()
+{
+  open(path, endpointsOnly);
+}
+
+graph::graph(std::vector<polyline> edges)
   : open_{ true }
   , bounds_{ glm::vec2{ std::numeric_limits<float>::max() },
              glm::vec2{ std::numeric_limits<float>::min() } }
   , range_{ std::numeric_limits<float>::max(),
             std::numeric_limits<float>::min() }
   , pointCount_{ 0 }
-  , lines_(std::move(lines))
+  , edges_(std::move(edges))
 {
   calculate_limits();
 }
 
-graph::graph(const std::string& path, bool endpointsOnly)
-  : graph()
+graph::graph(std::initializer_list<polyline> edges)
+  : graph(std::vector(edges))
 {
-  open(path, endpointsOnly);
 }
 
 bool
@@ -49,8 +55,8 @@ graph::open(const std::string& path, bool endpointsOnly)
   // *** Set open to true
   open_ = true;
 
-  // *** Pointer to the line that is currently being loaded
-  std::unique_ptr<polyline> line;
+  // *** Optional list of points, will be null_opt if no line is being loaded
+  std::optional<std::vector<point_t>> points;
 
   // *** Check if the end of the file has been reached
   bool eof = false;
@@ -66,39 +72,36 @@ graph::open(const std::string& path, bool endpointsOnly)
     // *** Check if the end of the line (or file) has been reached
     if (eof || token.ends_with(':')) {
       // *** Check if we are working on constructing a polyline
-      if (line) {
-        // *** Update the polyline to only keep the beginning and endpoint
-        if (endpointsOnly) {
-          const auto& [start, end] = line->endpoints();
-          line = std::make_unique<polyline>(std::vector{ start, end });
-        }
+      if (points) {
+        // *** Convert into polyline
+        polyline line(std::move(points.value()));
+
+        // *** Reset the optional
+        points.reset();
 
         // *** Update the point count
-        pointCount_ += line->points().size();
+        pointCount_ += line.size();
 
         // *** Update the bounds
-        bounds_.min.x = std::min(bounds_.min.x, line->bounds().min.x);
-        bounds_.min.y = std::min(bounds_.min.y, line->bounds().min.y);
-        bounds_.max.x = std::max(bounds_.max.x, line->bounds().max.x);
-        bounds_.max.y = std::max(bounds_.max.y, line->bounds().max.y);
+        bounds_.min.x = std::min(bounds_.min.x, line.bounds().min.x);
+        bounds_.min.y = std::min(bounds_.min.y, line.bounds().min.y);
+        bounds_.max.x = std::max(bounds_.max.x, line.bounds().max.x);
+        bounds_.max.y = std::max(bounds_.max.y, line.bounds().max.y);
 
         // *** Update the min max lengths found
-        range_.min = std::min(range_.min, line->length());
-        range_.max = std::max(range_.max, line->length());
+        range_.min = std::min(range_.min, line.length());
+        range_.max = std::max(range_.max, line.length());
 
         // *** Move the polyline into the list of lines
-        lines_.emplace_back(std::move(line));
-
-        // *** Reset the pointer
-        line.reset();
+        edges_.emplace_back(std::move(line));
       }
 
       // *** Start on constructing a new poly line if the end hasn't been
       // reached yet
       if (!eof && std::all_of(token.begin(), token.end() - 1, ::isdigit)) {
-        line = std::make_unique<polyline>();
+        points = std::make_optional<std::vector<point_t>>();
       }
-    } else if (line && !token.starts_with('(') && !token.starts_with('<')) {
+    } else if (points && !token.starts_with('(') && !token.starts_with('<')) {
       // *** Store the x of the point before reading the next point
       float x = std::stof(token);
 
@@ -111,13 +114,17 @@ graph::open(const std::string& path, bool endpointsOnly)
       // *** Parse the y coordinate
       float y = std::stof(token);
 
-      // *** Add the point
-      line->add_point(x, y);
+      // *** Check if endpoints only is disabled, or the two points hasn't been
+      // reached yet
+      if (!endpointsOnly || points->size() < 2) {
+        // *** Add the point
+        points->emplace_back(x, y);
+      } else {
+        // *** Update the endpoints position
+        points->at(1) = { x, y };
+      }
     }
   }
-
-  printf("Edges: %zu, points: %zu\n", lines_.size(), pointCount_);
-  printf("Min: %f, max: %f\n", range_.min, range_.max);
 
   return true;
 }
@@ -137,7 +144,7 @@ graph::close()
   pointCount_ = 0;
 
   // *** Remove all the lines
-  lines_.clear();
+  edges_.clear();
 
   // *** Reset the calculated limits
   reset_limits();
@@ -145,10 +152,66 @@ graph::close()
   return true;
 }
 
+void
+graph::recalculate_limits()
+{
+  reset_limits();
+  calculate_limits();
+}
+
 bool
 graph::is_open() const
 {
   return open_;
+}
+
+polyline&
+graph::operator[](size_t i)
+{
+  return at(i);
+}
+
+const polyline&
+graph::operator[](size_t i) const
+{
+  return at(i);
+}
+
+polyline&
+graph::at(size_t i)
+{
+  return edges_.at(i);
+}
+
+const polyline&
+graph::at(size_t i) const
+{
+  return edges_.at(i);
+}
+
+void
+graph::edges(std::vector<polyline> edges)
+{
+  edges_ = std::move(edges);
+  recalculate_limits();
+}
+
+const std::vector<polyline>&
+graph::edges() const
+{
+  return edges_;
+}
+
+size_t
+graph::size() const
+{
+  return edges_.size();
+}
+
+size_t
+graph::point_count() const
+{
+  return pointCount_;
 }
 
 graph::bounds_t
@@ -161,25 +224,6 @@ graph::range_t
 graph::range() const
 {
   return range_;
-}
-
-size_t
-graph::point_count() const
-{
-  return pointCount_;
-}
-
-const std::vector<std::unique_ptr<polyline>>&
-graph::edges() const
-{
-  return lines_;
-}
-
-void
-graph::recalculate_limits()
-{
-  reset_limits();
-  calculate_limits();
 }
 
 void
@@ -195,19 +239,19 @@ graph::reset_limits()
 void
 graph::calculate_limits()
 {
-  for (const auto& line : lines_) {
+  for (const auto& line : edges_) {
     // *** Update the point count
-    pointCount_ += line->points().size();
+    pointCount_ += line.size();
 
     // *** Update the bounds
-    bounds_.min.x = std::min(bounds_.min.x, line->bounds().min.x);
-    bounds_.min.y = std::min(bounds_.min.y, line->bounds().min.y);
-    bounds_.max.x = std::max(bounds_.max.x, line->bounds().max.x);
-    bounds_.max.y = std::max(bounds_.max.y, line->bounds().max.y);
+    bounds_.min.x = std::min(bounds_.min.x, line.bounds().min.x);
+    bounds_.min.y = std::min(bounds_.min.y, line.bounds().min.y);
+    bounds_.max.x = std::max(bounds_.max.x, line.bounds().max.x);
+    bounds_.max.y = std::max(bounds_.max.y, line.bounds().max.y);
 
     // *** Update the min max lengths found
-    range_.min = std::min(range_.min, line->length());
-    range_.max = std::max(range_.max, line->length());
+    range_.min = std::min(range_.min, line.length());
+    range_.max = std::max(range_.max, line.length());
   }
 }
 } // namespace cubu

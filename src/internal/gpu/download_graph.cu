@@ -21,7 +21,7 @@ gpu::download_graph(const linear_resource<glm::vec2>& pointsRes,
   }
 
   // *** Create a set for the new lines
-  std::vector<std::unique_ptr<polyline>> lines;
+  std::vector<polyline> lines;
 
   // *** Loop over all the edges
   for (size_t i = 0; i < h_edgeIndices.size(); i++) {
@@ -31,8 +31,8 @@ gpu::download_graph(const linear_resource<glm::vec2>& pointsRes,
                           ? static_cast<int>(h_points.size())
                           : h_edgeIndices[i + 1];
 
-    lines.emplace_back(std::make_unique<polyline>(std::vector<point_t>{
-      h_points.begin() + pointIndexStart, h_points.begin() + pointIndexEnd }));
+    lines.emplace_back(std::vector<point_t>{
+      h_points.begin() + pointIndexStart, h_points.begin() + pointIndexEnd });
   }
 
   // fixme: Normalize the graph!

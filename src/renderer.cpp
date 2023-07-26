@@ -164,14 +164,14 @@ renderer::render_graph(const graph& graph, const settings_t& settings) const
   // *** Loop over all the points in the graph
   for (const auto& line : graph.edges()) {
     // *** Add the line to the draw order based on length
-    drawOrder.emplace_back(line->length(), edgeIndices.size());
+    drawOrder.emplace_back(line.length(), edgeIndices.size());
 
     // *** Add the starting point of the next polyline to the list of edge
     // indices
     edgeIndices.emplace_back(vertexBuffer.size());
 
     // *** Normalize the line length
-    float normalizedLength = (line->length() - graph.range().min) /
+    float normalizedLength = (line.length() - graph.range().min) /
                              (graph.range().max - graph.range().min);
 
     // *** Create the base color
@@ -192,7 +192,7 @@ renderer::render_graph(const graph& graph, const settings_t& settings) const
       }
       case color_mode::directional: {
         // *** Get the endpoints of the trail to calculate the general direction of the trail
-        auto [from, to] = line->endpoints();
+        const auto &[from, to] = line.endpoints();
 
         // *** Calculate the angle between the vector from the start point to
         // the end point and the (inverted) x-axis
@@ -223,13 +223,13 @@ renderer::render_graph(const graph& graph, const settings_t& settings) const
       }
     }
 
-    for (size_t i = 0; i < line->points().size(); i++) {
+    for (size_t i = 0; i < line.size(); i++) {
       // *** Get the point
-      const auto& point = line->points()[i];
+      const auto& point = line[i];
 
       // *** Calculate t
       auto t =
-        static_cast<float>(i) / static_cast<float>(line->points().size() - 1);
+        static_cast<float>(i) / static_cast<float>(line.size() - 1);
       assert(t <= 1);
       t = 0.2f + 0.8f * std::pow(1.0f - 2.0f * std::abs(t - 0.5f), 0.5f);
       t = normalizedLength + (1.0f - normalizedLength) * 0.5f * t;

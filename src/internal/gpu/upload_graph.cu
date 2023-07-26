@@ -37,10 +37,10 @@ gpu::upload_graph(const graph& graph,
     h_edgeIndices.emplace_back(h_points.size());
 
     // *** Add the scaled length of the edge to the list of edge lengths
-    h_edgeLengths.emplace_back(line->length() / graph.range().max);
+    h_edgeLengths.emplace_back(line.length() / graph.range().max);
 
     // *** Loop over all the points in the line
-    for (const auto& point : line->points()) {
+    for (const auto& point : line.points()) {
       h_points.emplace_back((point - offset) * scale + translation);
     }
   }

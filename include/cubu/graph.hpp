@@ -34,13 +34,6 @@ public:
   explicit graph();
 
   /**
-   * Creates a graph from a set of edges.
-   *
-   * @param lines Edges of the graph.
-   */
-  explicit graph(std::vector<std::unique_ptr<polyline>> lines);
-
-  /**
    * Loads a graph from a text file.
    *
    * @param path          Path to the file containing the graph.
@@ -48,6 +41,20 @@ public:
    *                      should be kept.
    */
   explicit graph(const std::string& path, bool endpointsOnly = false);
+
+  /**
+   * Creates a graph from a set of edges.
+   *
+   * @param edges Edges of the graph.
+   */
+  explicit graph(std::vector<polyline> edges);
+
+  /**
+   * Creates a graph from a set of edges.
+   *
+   * @param edges Edges of the graph.
+   */
+  graph(std::initializer_list<polyline> edges);
 
   /**
    * Loads a graph from a text file. Fails if a graph has already been opened.
@@ -81,6 +88,70 @@ public:
   [[nodiscard]] bool is_open() const;
 
   /**
+   * Alias for polyline::at(size_t i).
+   *
+   * @param i Index of the point to retrieve.
+   *
+   * @returns Const. reference to i-th the point.
+   */
+  polyline& operator[](size_t i);
+
+  /**
+   * Alias for polyline::at(size_t i).
+   *
+   * @param i Index of the point to retrieve.
+   *
+   * @returns Const. reference to i-th the point.
+   */
+  const polyline& operator[](size_t i) const;
+
+  /**
+   * Retrieves the i-th polyline of the graph.
+   *
+   * @param i Index of the polyline to retrieve.
+   *
+   * @returns Reference to i-th the polyline.
+   */
+  [[nodiscard]] polyline& at(size_t i);
+
+  /**
+   * Retrieves the i-th polyline of the graph.
+   *
+   * @param i Index of the polyline to retrieve.
+   *
+   * @returns Const. reference to i-th the polyline.
+   */
+  [[nodiscard]] const polyline& at(size_t i) const;
+
+  /**
+   * Sets the edges of the graph and recalculates the bounds.
+   *
+   * @param edges Edges of the graph.
+   */
+  void edges(std::vector<polyline> edges);
+
+  /**
+   * Returns const reference to the underlying vector of edges.
+   *
+   * @returns Const reference to the vector of edges.
+   */
+  [[nodiscard]] const std::vector<polyline>& edges() const;
+
+  /**
+   * Returns the number of edges in the graph.
+   *
+   * @returns Number of edges in the graph.
+   */
+  [[nodiscard]] size_t size() const;
+
+  /**
+   * Returns all the points across all the edges in the graph.
+   *
+   * @returns Number of points in the graph.
+   */
+  [[nodiscard]] size_t point_count() const;
+
+  /**
    * Returns the bounding box encapsulating all edges in the graph.
    *
    * @returns Bounding box of the graph.
@@ -93,20 +164,6 @@ public:
    * @returns Min and max length of the edges in the graph.
    */
   [[nodiscard]] range_t range() const;
-
-  /**
-   * Returns all the points across all the edges in the graph.
-   *
-   * @returns Number of points in the graph.
-   */
-  [[nodiscard]] size_t point_count() const;
-
-  /**
-   * Returns const reference to the underlying vector of edges.
-   *
-   * @returns Const reference to the vector of edges.
-   */
-  [[nodiscard]] const std::vector<std::unique_ptr<polyline>>& edges() const;
 
 private:
   /**
@@ -126,7 +183,7 @@ private:
   bounds_t bounds_;
   range_t range_;
   size_t pointCount_;
-  std::vector<std::unique_ptr<polyline>> lines_;
+  std::vector<polyline> edges_;
 };
 } // namespace cubu
 
