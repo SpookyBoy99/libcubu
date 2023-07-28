@@ -26,7 +26,7 @@ bundling::separate_bundles(const cubu::graph& bundledGraph, float displacement)
     // *** Loop over all points in the edge except first and last
     for (size_t i = 1; i < edge.size() - 1; i++) {
       // *** Get the next point
-      const auto& currentPoint = edge.at(i);
+      const auto& currentPoint = edge.point_at(i);
 
       // *** Calculate the distance between the previous and current point and
       // add it to the accumulated distance from the start

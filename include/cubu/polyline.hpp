@@ -66,45 +66,83 @@ public:
   /**
    * Alias for polyline::at(size_t i).
    *
-   * @param i Index of the point to retrieve.
+   * @param i Index of the point and displacement to retrieve.
    *
-   * @returns Const. reference to i-th the point.
+   * @returns Reference to the i-th point in the polyline and it's displacement.
    */
-  point_t& operator[](size_t i);
+  std::pair<point_t&, float&> operator[](size_t i);
 
   /**
    * Alias for polyline::at(size_t i).
    *
-   * @param i Index of the point to retrieve.
+   * @param i Index of the point and displacement to retrieve.
    *
-   * @returns Const. reference to i-th the point.
+   * @returns Const. reference to the i-th point in the polyline and it's
+   *          displacement.
    */
-  const point_t& operator[](size_t i) const;
+  std::pair<const point_t&, float> operator[](size_t i) const;
+
+  /**
+   * Retrieves the i-th point and displacement of the polyline.
+   *
+   * @param i Index of the point and displacement to retrieve.
+   *
+   * @returns Reference to the i-th point in the polyline and it's displacement.
+   */
+  [[nodiscard]] std::pair<point_t&, float&> at(size_t i);
+
+  /**
+   * Retrieves the i-th point and displacement of the polyline.
+   *
+   * @param i Index of the point and displacement to retrieve.
+   *
+   * @returns Const. reference to the i-th point in the polyline and it's
+   *          displacement.
+   */
+  [[nodiscard]] std::pair<const point_t&, float> at(size_t i) const;
 
   /**
    * Retrieves the i-th point of the polyline.
    *
    * @param i Index of the point to retrieve.
    *
-   * @returns Reference to i-th the point.
+   * @returns Reference to the i-th point in the polyline.
    */
-  [[nodiscard]] point_t& at(size_t i);
+  [[nodiscard]] point_t& point_at(size_t i);
 
   /**
    * Retrieves the i-th point of the polyline.
    *
    * @param i Index of the point to retrieve.
    *
-   * @returns Const. reference to i-th the point.
+   * @returns Const. reference to the i-th point in the polyline.
    */
-  [[nodiscard]] const point_t& at(size_t i) const;
+  [[nodiscard]] const point_t& point_at(size_t i) const;
+
+  /**
+   * Retrieves the displacement of the i-th point of the polyline.
+   *
+   * @param i Index of the point to retrieve the displacement of.
+   *
+   * @returns Reference to the displacement of the i-th point in the polyline.
+   */
+  [[nodiscard]] float& displacement_at(size_t i);
+
+  /**
+   * Retrieves the displacement of the i-th point of the polyline.
+   *
+   * @param i Index of the point to retrieve the displacement of.
+   *
+   * @returns Displacement of the i-th point in the polyline.
+   */
+  [[nodiscard]] float displacement_at(size_t i) const;
 
   /**
    * Getter for the first and last point of the polyline.
    *
    * @returns Polyline endpoints.
    */
-  [[nodiscard]] std::tuple<point_t, point_t> endpoints() const;
+  [[nodiscard]] std::pair<point_t, point_t> endpoints() const;
 
   /**
    * Sets the points of the polyline and the displacements for these points and

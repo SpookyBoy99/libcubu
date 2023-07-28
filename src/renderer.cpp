@@ -191,8 +191,9 @@ renderer::render_graph(const graph& graph, const settings_t& settings) const
         break;
       }
       case color_mode::directional: {
-        // *** Get the endpoints of the trail to calculate the general direction of the trail
-        const auto &[from, to] = line.endpoints();
+        // *** Get the endpoints of the trail to calculate the general direction
+        // of the trail
+        const auto& [from, to] = line.endpoints();
 
         // *** Calculate the angle between the vector from the start point to
         // the end point and the (inverted) x-axis
@@ -225,11 +226,10 @@ renderer::render_graph(const graph& graph, const settings_t& settings) const
 
     for (size_t i = 0; i < line.size(); i++) {
       // *** Get the point
-      const auto& point = line[i];
+      const auto& point = line.point_at(i);
 
       // *** Calculate t
-      auto t =
-        static_cast<float>(i) / static_cast<float>(line.size() - 1);
+      auto t = static_cast<float>(i) / static_cast<float>(line.size() - 1);
       assert(t <= 1);
       t = 0.2f + 0.8f * std::pow(1.0f - 2.0f * std::abs(t - 0.5f), 0.5f);
       t = normalizedLength + (1.0f - normalizedLength) * 0.5f * t;

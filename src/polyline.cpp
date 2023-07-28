@@ -41,31 +41,55 @@ polyline::recalculate_properties()
   calculate_properties();
 }
 
-point_t&
+std::pair<point_t&, float&>
 polyline::operator[](size_t i)
 {
   return at(i);
 }
 
-const point_t&
+std::pair<const point_t&, float>
 polyline::operator[](size_t i) const
 {
   return at(i);
 }
 
-point_t&
+std::pair<point_t&, float&>
 polyline::at(size_t i)
+{
+  return { points_.at(i), displacements_.at(i) };
+}
+
+std::pair<const point_t&, float>
+polyline::at(size_t i) const
+{
+  return { points_.at(i), displacements_.at(i) };
+}
+
+point_t&
+polyline::point_at(size_t i)
 {
   return points_.at(i);
 }
 
 const point_t&
-polyline::at(size_t i) const
+polyline::point_at(size_t i) const
 {
   return points_.at(i);
 }
 
-std::tuple<point_t, point_t>
+float&
+polyline::displacement_at(size_t i)
+{
+  return displacements_.at(i);
+}
+
+float
+polyline::displacement_at(size_t i) const
+{
+  return displacements_.at(i);
+}
+
+std::pair<point_t, point_t>
 polyline::endpoints() const
 {
   return { points_.front(), points_.back() };
@@ -94,6 +118,7 @@ polyline::points() const
 void
 polyline::displacements(std::vector<float> displacements)
 {
+  assert(displacements.size() == points_.size() || displacements.size() == 0);
   displacements_ = std::move(displacements);
 }
 

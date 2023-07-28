@@ -42,7 +42,7 @@ bundling::interpolate(const graph& originalGraph,
     // *** Loop over all points in the bundled edge except first and last
     for (size_t j = 1; j < bundledEdge.size() - 1; j++) {
       // *** Get the next point
-      const auto& currentPoint = bundledEdge.at(j);
+      const auto& currentPoint = bundledEdge.point_at(j);
 
       // *** Calculate the distance between the previous and current point and
       // add it to the accumulated distance from the start
@@ -62,7 +62,8 @@ bundling::interpolate(const graph& originalGraph,
         t * static_cast<float>(originalEdge.size() - 1) - static_cast<float>(k);
 
       // *** Calculate the interpolated point position
-      glm::vec2 p = originalEdge[k] * (1 - u) + originalEdge[k + 1] * u;
+      glm::vec2 p =
+        originalEdge.point_at(k) * (1 - u) + originalEdge.point_at(k + 1) * u;
 
       // *** Store the displacement distance
       const float displacementDistance = glm::distance(currentPoint, p);
