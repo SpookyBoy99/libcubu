@@ -192,6 +192,7 @@ graph::at(size_t i) const
 void
 graph::edges(std::vector<polyline> edges)
 {
+  open_ = true;
   edges_ = std::move(edges);
   recalculate_limits();
 }
